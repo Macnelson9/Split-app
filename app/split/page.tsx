@@ -1177,7 +1177,7 @@ export default function SplitPage() {
                               onClick={() =>
                                 setShowWalletOptions(!showWalletOptions)
                               }
-                              className="w-full bg-[#FCFE52] hover:bg-[#0041CC] text-white flex items-center justify-between"
+                              className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black flex items-center justify-between"
                             >
                               <div className="flex items-center gap-2">
                                 <Wallet className="w-4 h-4" />
