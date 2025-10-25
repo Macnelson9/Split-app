@@ -704,56 +704,65 @@ export default function SplitPage() {
           </div>
 
           {/* Dashboard Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:flex sm:flex-row sm:justify-center lg:grid lg:grid-cols-4 gap-6 mb-12">
             <Button
               onClick={() => handleViewChange("createSplit")}
-              className={`h-32 flex flex-col items-center justify-center gap-3 ${
+              variant={activeView === "createSplit" ? "default" : "outline"}
+              className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
                 activeView === "createSplit"
                   ? "bg-[#FCFE52] text-black border-[#FCFE52]"
                   : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
               }`}
             >
               <Plus className="w-8 h-8" />
-              <span className="text-lg font-semibold">Create Split</span>
+              <span className="hidden sm:block text-lg font-semibold">
+                Create Split
+              </span>
             </Button>
 
             <Button
               onClick={() => handleViewChange("mySplits")}
-              variant="outline"
-              className={`h-32 flex flex-col items-center justify-center gap-3 ${
+              variant={activeView === "mySplits" ? "default" : "outline"}
+              className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
                 activeView === "mySplits"
                   ? "bg-[#FCFE52] text-black border-[#FCFE52]"
                   : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
               }`}
             >
               <FileText className="w-8 h-8" />
-              <span className="text-lg font-semibold">My Splits</span>
+              <span className="hidden sm:block text-lg font-semibold">
+                My Splits
+              </span>
             </Button>
 
             <Button
               onClick={() => handleViewChange("swap")}
-              variant="outline"
-              className={`h-32 flex flex-col items-center justify-center gap-3 ${
+              variant={activeView === "swap" ? "default" : "outline"}
+              className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
                 activeView === "swap"
                   ? "bg-[#FCFE52] text-black border-[#FCFE52]"
                   : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
               }`}
             >
               <ArrowRightLeft className="w-8 h-8" />
-              <span className="text-lg font-semibold">Swap</span>
+              <span className="hidden sm:block text-lg font-semibold">
+                Swap
+              </span>
             </Button>
 
             <Button
               onClick={() => handleViewChange("transactions")}
-              variant="outline"
-              className={`h-32 flex flex-col items-center justify-center gap-3 ${
+              variant={activeView === "transactions" ? "default" : "outline"}
+              className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
                 activeView === "transactions"
                   ? "bg-[#FCFE52] text-black border-[#FCFE52]"
                   : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
               }`}
             >
               <History className="w-8 h-8" />
-              <span className="text-lg font-semibold">Transactions</span>
+              <span className="hidden sm:block text-lg font-semibold">
+                Transactions
+              </span>
             </Button>
           </div>
 
