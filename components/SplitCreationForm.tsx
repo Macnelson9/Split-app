@@ -30,19 +30,24 @@ const BASE_TOKENS = [
     name: "Ethereum",
   },
   {
-    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    address: "0x471EcE3750Da237f93B8E339c536989b8978a438",
+    symbol: "Celo",
+    name: "CeloToken",
+  },
+  {
+    address: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
     symbol: "USDC",
     name: "USD Coin",
   },
   {
-    address: "0x4200000000000000000000000000000000000006",
-    symbol: "WETH",
-    name: "Wrapped Ethereum",
+    address: "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+    symbol: "USDT",
+    name: "Tether USD",
   },
   {
-    address: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
-    symbol: "DAI",
-    name: "Dai Stablecoin",
+    address: "0xD221812de1BD094f35587EE8E174B07B6167D9Af",
+    symbol: "WETH",
+    name: "Wrapped Ethereum",
   },
 ];
 
@@ -350,7 +355,7 @@ export function SplitCreationForm({
                 size="sm"
                 onClick={() =>
                   window.open(
-                    `https://sepolia.basescan.org/address/${createdSplitAddress}`,
+                    `https://celoscan.io/address/${createdSplitAddress}`,
                     "_blank"
                   )
                 }
@@ -360,7 +365,7 @@ export function SplitCreationForm({
                     : "border-black/20 hover:bg-black/10"
                 }`}
               >
-                View on BaseScan
+                View on CeloScan
               </Button>
             </div>
           </div>

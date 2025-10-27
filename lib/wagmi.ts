@@ -1,10 +1,10 @@
 import { http, createConfig } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
+import { celo } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
 import SPLIT_CONTRACT_ABI from "./SPLIT_CONTRACT_ABI.json";
 
 export const config = createConfig({
-  chains: [baseSepolia],
+  chains: [celo],
   connectors: [
     injected(),
     walletConnect({
@@ -12,7 +12,7 @@ export const config = createConfig({
     }),
   ],
   transports: {
-    [baseSepolia.id]: http(),
+    [celo.id]: http(),
   },
 });
 

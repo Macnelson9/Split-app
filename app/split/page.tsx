@@ -16,13 +16,22 @@ import { gsap } from "gsap";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useConnect, useDisconnect, useAccount, useSwitchChain } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
+import { celo } from "wagmi/chains";
 import { Wallet, ExternalLink, ChevronDown } from "lucide-react";
 import { SplitCreationForm } from "@/components/SplitCreationForm";
 import { SplitCard } from "@/components/SplitCard";
+import TokenSelector from "@/components/TokenSelector";
 import { useWallet } from "@/src/hooks/useWallet";
 import { useSplitFactory } from "@/src/hooks/useSplitFactory";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
+
+interface Token {
+  symbol: string;
+  name: string;
+  icon: string;
+  price?: string;
+  usdPrice: number; // USD price per token
+}
 
 export default function SplitPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -34,14 +43,23 @@ export default function SplitPage() {
     "default" | "mySplits" | "swap" | "transactions" | "createSplit"
   >("default");
   const [showWalletOptions, setShowWalletOptions] = useState(false);
+  const [fromToken, setFromToken] = useState<Token>({
+    symbol: "ETH",
+    name: "Ethereum",
+    icon: "Ξ",
+    price: "$2,450.67",
+    usdPrice: 2450.67,
+  });
+  const [swapAmount, setSwapAmount] = useState("");
 
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const { isConnected, address, isOnBaseSepolia } = useWallet();
+  const { isConnected, address } = useWallet();
   const { connectors, connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const { chain } = useAccount();
   const { switchChain } = useSwitchChain();
+  const isOnCelo = chain?.id === celo.id;
   const { fetchUserSplits, fetchUserSplitsWithAddress } = useSplitFactory();
   const { showError } = useToastNotification();
 
@@ -62,7 +80,7 @@ export default function SplitPage() {
   }, []);
 
   const loadUserSplits = useCallback(async () => {
-    if (!address || !isOnBaseSepolia) {
+    if (!address || !isOnCelo) {
       setUserSplits([]);
       return;
     }
@@ -80,7 +98,7 @@ export default function SplitPage() {
       console.error("Failed to load user splits:", error);
       showError("Failed to load user splits", "Please try again later");
     }
-  }, [address, isOnBaseSepolia, fetchUserSplitsWithAddress, showError]);
+  }, [address, isOnCelo, fetchUserSplitsWithAddress, showError]);
 
   useEffect(() => {
     loadUserSplits();
@@ -142,17 +160,79 @@ export default function SplitPage() {
   };
 
   const handleSwitchNetwork = async () => {
-    if (chain?.id !== baseSepolia.id) {
+    if (chain?.id !== celo.id) {
       try {
-        await switchChain({ chainId: baseSepolia.id });
+        await switchChain({ chainId: celo.id });
       } catch (error) {
-        console.error("Failed to switch to Base Sepolia:", error);
+        console.error("Failed to switch to Celo:", error);
       }
     }
   };
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  const availableTokens: Token[] = [
+    {
+      symbol: "ETH",
+      name: "Ethereum",
+      icon: "Ξ",
+      price: "$2,450.67",
+      usdPrice: 2450.67,
+    },
+    {
+      symbol: "Celo",
+      name: "CeloToken",
+      icon: "C",
+      price: "$0.85",
+      usdPrice: 0.85,
+    },
+    {
+      symbol: "USDC",
+      name: "USD Coin",
+      icon: "$",
+      price: "$1.00",
+      usdPrice: 1.0,
+    },
+    {
+      symbol: "USDT",
+      name: "Tether USD",
+      icon: "₮",
+      price: "$1.00",
+      usdPrice: 1.0,
+    },
+    {
+      symbol: "WETH",
+      name: "Wrapped Ethereum",
+      icon: "Ξ",
+      price: "$2,450.67",
+      usdPrice: 2450.67,
+    },
+  ];
+
+  const nairaToken = {
+    symbol: "NGN",
+    name: "Nigerian Naira",
+    icon: "₦",
+    price: "₦1.00",
+  };
+
+  // Calculate Naira equivalent (assuming 1 USD = 1500 NGN)
+  const usdToNairaRate = 1500;
+  const calculateNairaEquivalent = () => {
+    if (!swapAmount || isNaN(parseFloat(swapAmount))) return "0.00";
+    const usdValue = parseFloat(swapAmount) * fromToken.usdPrice;
+    return (usdValue * usdToNairaRate).toLocaleString("en-NG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const handleSwap = () => {
+    // Placeholder for swap logic
+    console.log(`Swapping ${swapAmount} ${fromToken.symbol} to NGN`);
+    // TODO: Implement actual swap logic
   };
 
   if (!isClient) {
@@ -795,12 +875,12 @@ export default function SplitPage() {
                             </p>
                           </div>
 
-                          {!isOnBaseSepolia && (
+                          {!isOnCelo && (
                             <Button
                               onClick={handleSwitchNetwork}
                               className="w-full bg-orange-500 hover:bg-orange-600 text-white"
                             >
-                              Switch to Base Sepolia
+                              Switch to Celo
                             </Button>
                           )}
 
@@ -815,7 +895,7 @@ export default function SplitPage() {
                             <Button
                               onClick={() =>
                                 window.open(
-                                  `https://sepolia.basescan.org/address/${address}`,
+                                  `https://celoscan.io/address/${address}`,
                                   "_blank"
                                 )
                               }
@@ -874,7 +954,7 @@ export default function SplitPage() {
                   </Card>
 
                   {/* Split Creation Form - Only show if wallet is connected and on correct network */}
-                  {isConnected && isOnBaseSepolia && (
+                  {isConnected && isOnCelo && (
                     <div className="border border-white">
                       <SplitCreationForm
                         theme={theme}
@@ -909,7 +989,7 @@ export default function SplitPage() {
                   </Button>
                 </div>
 
-                {isConnected && isOnBaseSepolia && userSplits.length > 0 && (
+                {isConnected && isOnCelo && userSplits.length > 0 && (
                   <motion.div
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     initial="hidden"
@@ -944,7 +1024,7 @@ export default function SplitPage() {
                   </motion.div>
                 )}
 
-                {isConnected && isOnBaseSepolia && userSplits.length === 0 && (
+                {isConnected && isOnCelo && userSplits.length === 0 && (
                   <div className="text-center py-12">
                     <p
                       className={`${
@@ -968,14 +1048,14 @@ export default function SplitPage() {
                   </div>
                 )}
 
-                {isConnected && !isOnBaseSepolia && (
+                {isConnected && !isOnCelo && (
                   <div className="text-center py-12">
                     <p
                       className={`${
                         theme === "dark" ? "text-white/50" : "text-black/50"
                       } text-lg`}
                     >
-                      Please switch to Base Sepolia network to view your splits.
+                      Please switch to Celo network to view your splits.
                     </p>
                   </div>
                 )}
@@ -1022,35 +1102,36 @@ export default function SplitPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <TokenSelector
+                        selectedToken={fromToken}
+                        onTokenSelect={setFromToken}
+                        tokens={availableTokens}
+                        theme={theme}
+                        label="From Token"
+                      />
+
                       <div className="space-y-2">
                         <label
                           className={`text-sm ${
                             theme === "dark" ? "text-white/70" : "text-black/70"
                           }`}
                         >
-                          From Token
+                          Amount
                         </label>
-                        <div className="flex items-center gap-2 p-3 border rounded-lg">
-                          <span className="text-lg">Ξ</span>
-                          <span
-                            className={
-                              theme === "dark" ? "text-white" : "text-black"
-                            }
-                          >
-                            ETH
-                          </span>
-                          <span
-                            className={`text-sm ${
-                              theme === "dark"
-                                ? "text-white/50"
-                                : "text-black/50"
-                            } ml-auto`}
-                          >
-                            $2,450.67
-                          </span>
-                        </div>
+                        <input
+                          type="number"
+                          value={swapAmount}
+                          onChange={(e) => setSwapAmount(e.target.value)}
+                          placeholder="Enter amount"
+                          className={`w-full p-3 border rounded-lg ${
+                            theme === "dark"
+                              ? "bg-black/50 border-white/20 text-white placeholder-white/50"
+                              : "bg-white/50 border-black/20 text-black placeholder-black/50"
+                          }`}
+                        />
                       </div>
+
                       <div className="space-y-2">
                         <label
                           className={`text-sm ${
@@ -1059,14 +1140,23 @@ export default function SplitPage() {
                         >
                           To Token
                         </label>
-                        <div className="flex items-center gap-2 p-3 border rounded-lg">
-                          <span className="text-lg">$</span>
+                        <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-100 dark:bg-gray-800">
+                          <span className="text-lg">{nairaToken.icon}</span>
                           <span
                             className={
                               theme === "dark" ? "text-white" : "text-black"
                             }
                           >
-                            USDC
+                            {nairaToken.symbol}
+                          </span>
+                          <span
+                            className={`text-sm ${
+                              theme === "dark"
+                                ? "text-white/70"
+                                : "text-black/70"
+                            }`}
+                          >
+                            {nairaToken.name}
                           </span>
                           <span
                             className={`text-sm ${
@@ -1075,13 +1165,41 @@ export default function SplitPage() {
                                 : "text-black/50"
                             } ml-auto`}
                           >
-                            $1.00
+                            {nairaToken.price}
                           </span>
                         </div>
                       </div>
+
+                      {/* Naira Equivalent Display */}
+                      {swapAmount && parseFloat(swapAmount) > 0 && (
+                        <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <span
+                            className={`text-sm ${
+                              theme === "dark"
+                                ? "text-white/70"
+                                : "text-black/70"
+                            }`}
+                          >
+                            You will receive:
+                          </span>
+                          <span
+                            className={`text-lg font-semibold ${
+                              theme === "dark"
+                                ? "text-green-400"
+                                : "text-green-600"
+                            }`}
+                          >
+                            ₦{calculateNairaEquivalent()}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <Button className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black">
-                      Swap Tokens
+                    <Button
+                      onClick={handleSwap}
+                      className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black"
+                      disabled={!swapAmount || parseFloat(swapAmount) <= 0}
+                    >
+                      Swap to Naira
                     </Button>
                   </CardContent>
                 </Card>
@@ -1135,12 +1253,12 @@ export default function SplitPage() {
                             </p>
                           </div>
 
-                          {!isOnBaseSepolia && (
+                          {!isOnCelo && (
                             <Button
                               onClick={handleSwitchNetwork}
                               className="w-full bg-orange-500 hover:bg-orange-600 text-white"
                             >
-                              Switch to Base Sepolia
+                              Switch to Celo
                             </Button>
                           )}
 
@@ -1155,7 +1273,7 @@ export default function SplitPage() {
                             <Button
                               onClick={() =>
                                 window.open(
-                                  `https://sepolia.basescan.org/address/${address}`,
+                                  `https://celoscan.io/address/${address}`,
                                   "_blank"
                                 )
                               }
@@ -1214,7 +1332,7 @@ export default function SplitPage() {
                   </Card>
 
                   {/* Split Creation Form - Only show if wallet is connected and on correct network */}
-                  {isConnected && isOnBaseSepolia && (
+                  {isConnected && isOnCelo && (
                     <div className="border border-white">
                       <SplitCreationForm
                         theme={theme}
@@ -1291,7 +1409,7 @@ export default function SplitPage() {
           </div>
 
           {/* Message when no splits */}
-          {isConnected && isOnBaseSepolia && userSplits.length === 0 && (
+          {isConnected && isOnCelo && userSplits.length === 0 && (
             <div className="text-center py-12">
               <p
                 className={`${
@@ -1317,14 +1435,14 @@ export default function SplitPage() {
           )}
 
           {/* Message when on wrong network */}
-          {isConnected && !isOnBaseSepolia && (
+          {isConnected && !isOnCelo && (
             <div className="text-center py-12">
               <p
                 className={`${
                   theme === "dark" ? "text-white/50" : "text-black/50"
                 } text-lg`}
               >
-                Please switch to Base Sepolia network to create and manage
+                Please switch to Celo network to create and manage
                 splits.
               </p>
             </div>
