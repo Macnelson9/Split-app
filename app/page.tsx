@@ -1224,7 +1224,7 @@ export default function HomePage() {
             theme === "dark" ? "text-white/70" : "text-black/70"
           } text-base sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 max-w-2xl text-pretty font-[family-name:var(--font-rajdhani)] font-medium leading-relaxed text-center sm:text-left`}
         >
-          Send once. Split instantly. Powered by Base.
+          Send once. Split instantly.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">

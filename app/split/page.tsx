@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import BankDetailsDialog from "@/components/BankDetailsDialog";
+import ERC20_ABI from "@/lib/ERC20_ABI.json";
 interface Token {
   symbol: string;
   name: string;
@@ -100,7 +101,7 @@ export default function SplitPage() {
   const { disconnect } = useDisconnect();
   const { chain } = useAccount();
   const { switchChain } = useSwitchChain();
-  const { writeContract } = useWriteContract();
+  const { writeContractAsync } = useWriteContract();
   const isOnCelo = chain?.id === celo.id;
   const isOnBase = chain?.id === base.id;
   const isOnCeloSepolia = chain?.id === celoSepolia.id;
@@ -146,20 +147,21 @@ export default function SplitPage() {
       return;
     }
     try {
-      const splits = await fetchSplits();
+      // const splits = await fetchSplits();
       // For now, we'll just store the addresses. In a real app, you'd fetch more details
-      setUserSplits(
-        splits.map((splitAddress: string) => ({
-          address: splitAddress,
-          token: "0x0000000000000000000000000000000000000000", // Default to ETH
-          createdAt: Date.now() / 1000, // Placeholder timestamp
-        }))
-      );
+      setUserSplits([]);
+      // setUserSplits(
+      //   splits.map((splitAddress: string) => ({
+      //     address: splitAddress,
+      //     token: "0x0000000000000000000000000000000000000000", // Default to ETH
+      //     createdAt: Date.now() / 1000, // Placeholder timestamp
+      //   }))
+      // );
     } catch (error) {
-      console.error("Failed to load user splits:", error);
-      showError("Failed to load user splits", "Please try again later");
+      // console.error("Failed to load user splits:", error);
+      // showError("Failed to load user splits", "Please try again later");
     }
-  }, [address, isOnSupportedNetwork, fetchSplits, showError]);
+  }, [address, isOnSupportedNetwork]);
 
   // Load splits when component mounts or when network/address changes
   useEffect(() => {
@@ -399,12 +401,19 @@ export default function SplitPage() {
           `https://spliting-rhq3.onrender.com/payment/orders/${orderId}`
         );
         const data = await response.json();
+        console.log("🔍 Settlement API Response:", data);
         if (data.status === "success") {
-          const settlementStatus = data.order.settlement;
+          const settlementStatus = data.data?.status;
+          console.log("🔍 Order data:", data.data);
+          console.log("🔍 Amount paid:", data.data?.amountPaid);
+          console.log("🔍 TX hash:", data.data?.txHash);
           setPaymentStatus(settlementStatus);
+
+          console.log(`🔄 Payment status update: ${settlementStatus}`);
 
           if (settlementStatus === "settled") {
             // Payment settled, transaction is complete
+            console.log("🎉 Payment settlement completed successfully!");
             showSuccess("Payment completed successfully!");
             setShowSuccessModal(true);
             setPaymentOrderId(null);
@@ -412,6 +421,7 @@ export default function SplitPage() {
             setPaymentStatus(null);
             return; // Stop monitoring
           } else if (settlementStatus === "failed") {
+            console.log("❌ Payment settlement failed");
             showError("Payment settlement failed");
             setPaymentOrderId(null);
             setReceiveAddress(null);
@@ -421,6 +431,8 @@ export default function SplitPage() {
             showInfo("Payment is being processed...");
           } else if (settlementStatus === "pending") {
             showInfo("Payment is pending settlement...");
+          } else if (settlementStatus === "initiated") {
+            showInfo("Payment order initiated, waiting for processing...");
           }
         }
       } catch (error) {
@@ -447,34 +459,48 @@ export default function SplitPage() {
     },
   };
 
-  const ERC20_ABI = [
-    {
-      constant: false,
-      inputs: [
-        { name: "_to", type: "address" },
-        { name: "_value", type: "uint256" },
-      ],
-      name: "transfer",
-      outputs: [{ name: "", type: "bool" }],
-      type: "function",
-    },
-    {
-      constant: true,
-      inputs: [{ name: "_owner", type: "address" }],
-      name: "balanceOf",
-      outputs: [{ name: "balance", type: "uint256" }],
-      type: "function",
-    },
-  ];
+  // console.log("🔄 Starting swap process...");
+  // console.log("📊 Swap details:", {
+  //   amount: swapAmount,
+  //   token: fromToken.symbol,
+  //   network: isOnCelo ? "celo" : "base",
+  // });
 
-  const transferTokensToReceiveAddress = async () => {
-    if (!receiveAddress || !address) return;
+  const transferTokensToReceiveAddress = async (receiveAddr: string) => {
+    console.log("🔄 transferTokensToReceiveAddress called");
+    console.log("🔍 receiveAddress:", receiveAddr);
+    console.log("🔍 address:", address);
+
+    if (!receiveAddr || !address) {
+      console.log("❌ Missing receiveAddress or address");
+      showError("Missing receive address or wallet address");
+      return;
+    }
+
+    if (!isConnected) {
+      showError("Please connect your wallet first");
+      return;
+    }
+
+    const network = isOnCelo ? "celo" : "base";
+    if (!isOnSupportedNetwork) {
+      showError(
+        `Please switch to the ${network === "celo" ? "Celo" : "Base"} network.`
+      );
+      return;
+    }
 
     try {
+      console.log("🔄 Starting token transfer process");
       // Handle ERC20 token transfer only (no native tokens)
-      const network = isOnCelo ? "celo" : "base";
       const networkTokens = TOKEN_ADDRESSES[network];
       const tokenAddress = networkTokens[fromToken.symbol];
+
+      console.log("🔍 Token lookup:", {
+        network,
+        symbol: fromToken.symbol,
+        tokenAddress,
+      });
 
       if (!tokenAddress) {
         throw new Error(
@@ -490,21 +516,38 @@ export default function SplitPage() {
       );
 
       console.log(
-        `Transferring ${amountInWei} ${fromToken.symbol} (${tokenAddress}) to ${receiveAddress}`
+        `💰 Transferring ${amountInWei} ${fromToken.symbol} (${tokenAddress}) to ${receiveAddr}`
       );
 
-      const result = await writeContract({
+      console.log("🔄 About to call writeContractAsync...");
+      console.log("🔍 Contract call parameters:", {
+        address: tokenAddress,
+        functionName: "transfer",
+        args: [receiveAddr, amountInWei],
+        abi: ERC20_ABI,
+      });
+
+      showInfo("Please confirm the token transfer in your wallet...");
+
+      const txHash = await writeContractAsync({
         address: tokenAddress as `0x${string}`,
         abi: ERC20_ABI,
         functionName: "transfer",
-        args: [receiveAddress as `0x${string}`, amountInWei],
+        args: [receiveAddr as `0x${string}`, amountInWei],
       });
 
-      console.log("ERC20 Transfer transaction:", result);
-      showSuccess(`Tokens transferred successfully to ${receiveAddress}`);
-      return result;
+      console.log("✅ ERC20 Transfer transaction hash:", txHash);
+      showSuccess(`Tokens transferred successfully! TX: ${txHash}`);
+
+      // Optional: Wait for transaction confirmation
+      // await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+      return txHash;
     } catch (error) {
-      console.error("Error in transferTokensToReceiveAddress:", error);
+      console.error("❌ Error in transferTokensToReceiveAddress:", error);
+      showError(
+        error instanceof Error ? error.message : "Token transfer failed"
+      );
       throw error;
     }
   };
@@ -537,6 +580,7 @@ export default function SplitPage() {
     }
     setIsProcessingPayment(true);
     try {
+      console.log("📝 Step 1: Creating payment order...");
       // Step 1: Create payment order
       showInfo("Creating payment order...");
 
@@ -563,19 +607,31 @@ export default function SplitPage() {
         }
       );
 
+      console.log("🔄 About to parse response.json()...");
       const data = await response.json();
-      if (data.status === "success") {
+      console.log("📨 Payment API Response:", data);
+      console.log("🔄 About to check if data.order.status === 'success'...");
+      console.log("🔍 data.order.status:", data.order?.status);
+      if (data.order?.status === "success") {
         const order = data.order;
         setPaymentOrderId(order.data.id);
         setReceiveAddress(order.data.receiveAddress);
         setPaymentStatus("pending");
+        console.log("✅ Payment order created:", {
+          orderId: order.data.id,
+          receiveAddress: order.data.receiveAddress,
+        });
         showSuccess("Payment order initiated successfully");
 
         // Step 2: Transfer tokens to receiveAddress
+        console.log("💸 Step 2: Initiating token transfer...");
         showInfo("Please approve the token transfer in your wallet...");
-        await transferTokensToReceiveAddress();
+        console.log("🔄 About to call transferTokensToReceiveAddress...");
+        await transferTokensToReceiveAddress(order.data.receiveAddress);
+        console.log("✅ transferTokensToReceiveAddress completed");
 
         // Step 3: Start monitoring payment settlement
+        console.log("👀 Step 3: Starting payment settlement monitoring...");
         showInfo("Monitoring payment settlement...");
         monitorPaymentSettlement(order.data.id);
 
