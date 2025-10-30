@@ -52,9 +52,9 @@ export function useSplitFactory() {
     FACTORY_ABI = SPLIT_CELO_MAINNET_FACTORY_ABI;
   }
 
-  console.log("Current chain:", chain?.name, chain?.id);
-  console.log("Using factory address:", FACTORY_ADDRESS);
-  console.log("Is on Base Sepolia:", isOnBaseSepolia);
+  // console.log("Current chain:", chain?.name, chain?.id);
+  // console.log("Using factory address:", FACTORY_ADDRESS);
+  // console.log("Is on Base Sepolia:", isOnBaseSepolia);
 
   // Read functions
   const { data: totalSplitsCreated } = useReadContract({

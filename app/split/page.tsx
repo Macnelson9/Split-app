@@ -79,11 +79,11 @@ export default function SplitPage() {
   >("createSplit");
   const [showWalletOptions, setShowWalletOptions] = useState(false);
   const [fromToken, setFromToken] = useState<Token>({
-    symbol: "ETH",
-    name: "Ethereum",
-    icon: "Ξ",
-    price: "$0.00",
-    usdPrice: 0,
+    symbol: "USDC",
+    name: "USD Coin",
+    icon: "$",
+    price: "$1.00",
+    usdPrice: 1,
   });
 
   const [swapAmount, setSwapAmount] = useState("");
@@ -91,6 +91,7 @@ export default function SplitPage() {
   const [receiveAddress, setReceiveAddress] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -178,7 +179,7 @@ export default function SplitPage() {
       );
       const data = await response.json();
       if (data.status === "success") {
-        const rate = parseFloat(data.data) / parseFloat(amount);
+        const rate = parseFloat(data.data);
         setNairaRate(rate);
       } else {
         throw new Error(data.message || "Failed to fetch rate");
@@ -260,10 +261,10 @@ export default function SplitPage() {
   );
 
   // Debug: Log current network and factory address
-  console.log("Current chain:", chain?.name, chain?.id);
-  console.log("Is on supported network:", isOnSupportedNetwork);
-  console.log("Is on Base Sepolia:", isOnBaseSepolia);
-  console.log("User splits count:", userSplits.length);
+  // console.log("Current chain:", chain?.name, chain?.id);
+  // console.log("Is on supported network:", isOnSupportedNetwork);
+  // console.log("Is on Base Sepolia:", isOnBaseSepolia);
+  // console.log("User splits count:", userSplits.length);
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
@@ -329,7 +330,6 @@ export default function SplitPage() {
       maximumFractionDigits: 2,
     });
   };
-
   const handleSwap = () => {
     if (!swapAmount || parseFloat(swapAmount) <= 0 || !nairaRate) {
       showError("Please enter a valid amount and wait for rate");
@@ -406,6 +406,7 @@ export default function SplitPage() {
           if (settlementStatus === "settled") {
             // Payment settled, transaction is complete
             showSuccess("Payment completed successfully!");
+            setShowSuccessModal(true);
             setPaymentOrderId(null);
             setReceiveAddress(null);
             setPaymentStatus(null);
@@ -416,6 +417,10 @@ export default function SplitPage() {
             setReceiveAddress(null);
             setPaymentStatus(null);
             return; // Stop monitoring
+          } else if (settlementStatus === "processing") {
+            showInfo("Payment is being processed...");
+          } else if (settlementStatus === "pending") {
+            showInfo("Payment is pending settlement...");
           }
         }
       } catch (error) {
@@ -434,7 +439,7 @@ export default function SplitPage() {
     celo: {
       USDC: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
       USDT: "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
-      CUSD: "0x765DE816845861e75A25fCA122bb6898B8B1282a", // cUSD on Celo
+      CUSD: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     },
     base: {
       USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
@@ -466,17 +471,12 @@ export default function SplitPage() {
     if (!receiveAddress || !address) return;
 
     try {
+      // Handle ERC20 token transfer only (no native tokens)
       const network = isOnCelo ? "celo" : "base";
       const networkTokens = TOKEN_ADDRESSES[network];
       const tokenAddress = networkTokens[fromToken.symbol];
 
       if (!tokenAddress) {
-        if (fromToken.symbol === "ETH") {
-          // Handle native ETH transfer
-          throw new Error(
-            "ETH transfers are not yet implemented. Please use ERC20 tokens."
-          );
-        }
         throw new Error(
           `Token ${fromToken.symbol} not supported on ${network}`
         );
@@ -500,7 +500,7 @@ export default function SplitPage() {
         args: [receiveAddress as `0x${string}`, amountInWei],
       });
 
-      console.log("Transfer transaction:", result);
+      console.log("ERC20 Transfer transaction:", result);
       showSuccess(`Tokens transferred successfully to ${receiveAddress}`);
       return result;
     } catch (error) {
@@ -538,6 +538,11 @@ export default function SplitPage() {
     setIsProcessingPayment(true);
     try {
       // Step 1: Create payment order
+      showInfo("Creating payment order...");
+
+      // Use the token symbol as-is (only ERC20 tokens supported)
+      const tokenSymbol = fromToken.symbol;
+
       const response = await fetch(
         "https://spliting-rhq3.onrender.com/payment",
         {
@@ -546,8 +551,8 @@ export default function SplitPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            amount: parseFloat(swapAmount),
-            token: fromToken.symbol,
+            amount: parseFloat(swapAmount), // Convert to number
+            token: tokenSymbol,
             network: isOnCelo ? "celo" : "base",
             recipient: {
               institution: selectedBank.code,
@@ -567,9 +572,11 @@ export default function SplitPage() {
         showSuccess("Payment order initiated successfully");
 
         // Step 2: Transfer tokens to receiveAddress
+        showInfo("Please approve the token transfer in your wallet...");
         await transferTokensToReceiveAddress();
 
         // Step 3: Start monitoring payment settlement
+        showInfo("Monitoring payment settlement...");
         monitorPaymentSettlement(order.data.id);
 
         setShowSwapModal(false);
@@ -1742,6 +1749,38 @@ export default function SplitPage() {
         onSend={handleSend}
         accountName={accountName}
       />
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent
+          className={
+            theme === "dark"
+              ? "bg-black/95 border-white/20 text-white"
+              : "bg-white border-black/20 text-black"
+          }
+        >
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">
+              🎉 Payment Successful!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-4">
+            <div className="text-6xl">✅</div>
+            <p className="text-lg">
+              Your swap has been completed successfully! The Naira funds have
+              been sent to your bank account.
+            </p>
+            <div className="pt-4">
+              <Button
+                onClick={() => setShowSuccessModal(false)}
+                className="bg-[#FCFE52] hover:bg-[#E6E84A] text-black"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
