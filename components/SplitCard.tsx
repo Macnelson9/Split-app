@@ -31,9 +31,9 @@ export function SplitCard({
   const {
     balances,
     isFinalized,
-    depositEth,
+    depositNative,
     depositToken,
-    distributeEth,
+    distributeNative,
     distributeToken,
     finalize,
     refreshData,
@@ -88,7 +88,7 @@ export function SplitCard({
 
     try {
       if (token === "0x0000000000000000000000000000000000000000") {
-        await depositEth(depositAmount);
+        await depositNative(depositAmount);
         showSuccess(
           "ETH deposited successfully!",
           `Deposited ${depositAmount} ETH`
@@ -115,7 +115,7 @@ export function SplitCard({
   const handleDistribute = async () => {
     try {
       if (token === "0x0000000000000000000000000000000000000000") {
-        await distributeEth();
+        await distributeNative();
         showSuccess("ETH distributed successfully!");
       } else {
         await distributeToken();

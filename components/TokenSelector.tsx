@@ -9,6 +9,7 @@ interface Token {
   name: string;
   icon: string;
   price?: string;
+  usdPrice: number;
 }
 
 interface TokenSelectorProps {

@@ -45,9 +45,9 @@ const BASE_TOKENS = [
     name: "Tether USD",
   },
   {
-    address: "0xD221812de1BD094f35587EE8E174B07B6167D9Af",
-    symbol: "WETH",
-    name: "Wrapped Ethereum",
+    address: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    symbol: "CUSD",
+    name: "Celo USD",
   },
 ];
 

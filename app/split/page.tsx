@@ -15,8 +15,15 @@ import { motion } from "framer-motion";
 import { gsap } from "gsap";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useConnect, useDisconnect, useAccount, useSwitchChain } from "wagmi";
-import { celo } from "wagmi/chains";
+import {
+  useConnect,
+  useDisconnect,
+  useAccount,
+  useSwitchChain,
+  useWriteContract,
+} from "wagmi";
+import { celo, base, baseSepolia } from "wagmi/chains";
+import { celoSepolia } from "@/lib/wagmi";
 import { Wallet, ExternalLink, ChevronDown } from "lucide-react";
 import { SplitCreationForm } from "@/components/SplitCreationForm";
 import { SplitCard } from "@/components/SplitCard";
@@ -24,7 +31,25 @@ import TokenSelector from "@/components/TokenSelector";
 import { useWallet } from "@/src/hooks/useWallet";
 import { useSplitFactory } from "@/src/hooks/useSplitFactory";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
+import { useTokenPrices } from "@/src/hooks/useTokenPrices";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import BankDetailsDialog from "@/components/BankDetailsDialog";
 interface Token {
   symbol: string;
   name: string;
@@ -34,23 +59,38 @@ interface Token {
 }
 
 export default function SplitPage() {
+  // Component state and hooks
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [accountNumber, setAccountNumber] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [selectedBank, setSelectedBank] = useState<any>(null);
+  const [banks, setBanks] = useState<any[]>([]);
+  const [banksLoading, setBanksLoading] = useState(false);
+  const [nairaRate, setNairaRate] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [isClient, setIsClient] = useState(false);
   const [decryptKey, setDecryptKey] = useState(0);
   const [userSplits, setUserSplits] = useState<any[]>([]);
   const [activeView, setActiveView] = useState<
-    "default" | "mySplits" | "swap" | "transactions" | "createSplit"
-  >("default");
+    "createSplit" | "mySplits" | "swap" | "transactions"
+  >("createSplit");
   const [showWalletOptions, setShowWalletOptions] = useState(false);
   const [fromToken, setFromToken] = useState<Token>({
     symbol: "ETH",
     name: "Ethereum",
     icon: "Ξ",
-    price: "$2,450.67",
-    usdPrice: 2450.67,
+    price: "$0.00",
+    usdPrice: 0,
   });
+
   const [swapAmount, setSwapAmount] = useState("");
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  const [receiveAddress, setReceiveAddress] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -59,9 +99,29 @@ export default function SplitPage() {
   const { disconnect } = useDisconnect();
   const { chain } = useAccount();
   const { switchChain } = useSwitchChain();
+  const { writeContract } = useWriteContract();
   const isOnCelo = chain?.id === celo.id;
-  const { fetchUserSplits, fetchUserSplitsWithAddress } = useSplitFactory();
-  const { showError } = useToastNotification();
+  const isOnBase = chain?.id === base.id;
+  const isOnCeloSepolia = chain?.id === celoSepolia.id;
+  const isOnBaseSepolia = chain?.id === baseSepolia.id;
+  const isOnSupportedNetwork =
+    isOnCelo || isOnBase || isOnCeloSepolia || isOnBaseSepolia;
+  const { fetchSplits } = useSplitFactory();
+  const { showError, showSuccess, showInfo } = useToastNotification();
+  const {
+    getAvailableTokens,
+    loading: pricesLoading,
+    error: pricesError,
+  } = useTokenPrices();
+
+  const availableTokens = getAvailableTokens();
+
+  // Update fromToken when availableTokens changes
+  useEffect(() => {
+    if (availableTokens.length > 0 && fromToken.usdPrice === 0) {
+      setFromToken(availableTokens[0]);
+    }
+  }, [availableTokens, fromToken.usdPrice]);
 
   useEffect(() => {
     // Load theme from localStorage on mount
@@ -80,12 +140,12 @@ export default function SplitPage() {
   }, []);
 
   const loadUserSplits = useCallback(async () => {
-    if (!address || !isOnCelo) {
+    if (!address || !isOnSupportedNetwork) {
       setUserSplits([]);
       return;
     }
     try {
-      const splits = await fetchUserSplitsWithAddress(address);
+      const splits = await fetchSplits();
       // For now, we'll just store the addresses. In a real app, you'd fetch more details
       setUserSplits(
         splits.map((splitAddress: string) => ({
@@ -98,11 +158,96 @@ export default function SplitPage() {
       console.error("Failed to load user splits:", error);
       showError("Failed to load user splits", "Please try again later");
     }
-  }, [address, isOnCelo, fetchUserSplitsWithAddress, showError]);
+  }, [address, isOnSupportedNetwork, fetchSplits, showError]);
 
+  // Load splits when component mounts or when network/address changes
   useEffect(() => {
     loadUserSplits();
   }, [loadUserSplits]);
+
+  const fetchNairaRate = async (token: string, amount: string) => {
+    if (!amount || parseFloat(amount) <= 0) {
+      setNairaRate(null);
+      return;
+    }
+    setRateLoading(true);
+    setRateError(null);
+    try {
+      const response = await fetch(
+        `https://api.paycrest.io/v1/rates/${token}/${amount}/NGN`
+      );
+      const data = await response.json();
+      if (data.status === "success") {
+        const rate = parseFloat(data.data) / parseFloat(amount);
+        setNairaRate(rate);
+      } else {
+        throw new Error(data.message || "Failed to fetch rate");
+      }
+    } catch (error) {
+      setRateError(error instanceof Error ? error.message : "Unknown error");
+      showError("Failed to fetch rate");
+    } finally {
+      setRateLoading(false);
+    }
+  };
+
+  const fetchBanks = async () => {
+    setBanksLoading(true);
+    try {
+      const response = await fetch(
+        "https://spliting-rhq3.onrender.com/payment/institutions/NGN"
+      );
+      const data = await response.json();
+      console.log("Banks API response:", data); // Debug log
+      if (data.status === "success") {
+        setBanks(data.data);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      console.error("Failed to fetch banks:", error);
+      showError("Failed to fetch banks");
+    } finally {
+      setBanksLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNairaRate(fromToken.symbol, swapAmount);
+  }, [fromToken.symbol, swapAmount]);
+
+  useEffect(() => {
+    if (showSwapModal) {
+      fetchBanks();
+    }
+  }, [showSwapModal]);
+
+  useEffect(() => {
+    if (isConnected && chain && !isOnSupportedNetwork) {
+      showInfo("Switching to supported network...");
+      handleSwitchNetwork();
+    }
+  }, [isConnected, chain, isOnSupportedNetwork]);
+
+  const handleSwitchNetwork = async () => {
+    if (!isOnSupportedNetwork) {
+      try {
+        // Try Celo first, then Base if Celo fails
+        try {
+          await switchChain({ chainId: celo.id });
+          showSuccess("Successfully switched to Celo network");
+        } catch {
+          await switchChain({ chainId: base.id });
+          showSuccess("Successfully switched to Base network");
+        }
+      } catch (error) {
+        showError(
+          "Failed to switch network. Please switch manually in your wallet."
+        );
+        console.error("Failed to switch to supported network:", error);
+      }
+    }
+  };
 
   const handleSplitCreated = useCallback(
     (splitAddress: string) => {
@@ -113,6 +258,12 @@ export default function SplitPage() {
     },
     [loadUserSplits]
   );
+
+  // Debug: Log current network and factory address
+  console.log("Current chain:", chain?.name, chain?.id);
+  console.log("Is on supported network:", isOnSupportedNetwork);
+  console.log("Is on Base Sepolia:", isOnBaseSepolia);
+  console.log("User splits count:", userSplits.length);
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
@@ -126,7 +277,7 @@ export default function SplitPage() {
   };
 
   const handleViewChange = (
-    view: "default" | "mySplits" | "swap" | "transactions" | "createSplit"
+    view: "createSplit" | "mySplits" | "swap" | "transactions"
   ) => {
     if (contentRef.current) {
       gsap.to(contentRef.current, {
@@ -159,57 +310,9 @@ export default function SplitPage() {
     setShowWalletOptions(false);
   };
 
-  const handleSwitchNetwork = async () => {
-    if (chain?.id !== celo.id) {
-      try {
-        await switchChain({ chainId: celo.id });
-      } catch (error) {
-        console.error("Failed to switch to Celo:", error);
-      }
-    }
-  };
-
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
-
-  const availableTokens: Token[] = [
-    {
-      symbol: "ETH",
-      name: "Ethereum",
-      icon: "Ξ",
-      price: "$2,450.67",
-      usdPrice: 2450.67,
-    },
-    {
-      symbol: "Celo",
-      name: "CeloToken",
-      icon: "C",
-      price: "$0.85",
-      usdPrice: 0.85,
-    },
-    {
-      symbol: "USDC",
-      name: "USD Coin",
-      icon: "$",
-      price: "$1.00",
-      usdPrice: 1.0,
-    },
-    {
-      symbol: "USDT",
-      name: "Tether USD",
-      icon: "₮",
-      price: "$1.00",
-      usdPrice: 1.0,
-    },
-    {
-      symbol: "WETH",
-      name: "Wrapped Ethereum",
-      icon: "Ξ",
-      price: "$2,450.67",
-      usdPrice: 2450.67,
-    },
-  ];
 
   const nairaToken = {
     symbol: "NGN",
@@ -217,22 +320,272 @@ export default function SplitPage() {
     icon: "₦",
     price: "₦1.00",
   };
-
-  // Calculate Naira equivalent (assuming 1 USD = 1500 NGN)
-  const usdToNairaRate = 1500;
   const calculateNairaEquivalent = () => {
-    if (!swapAmount || isNaN(parseFloat(swapAmount))) return "0.00";
-    const usdValue = parseFloat(swapAmount) * fromToken.usdPrice;
-    return (usdValue * usdToNairaRate).toLocaleString("en-NG", {
+    if (!swapAmount || isNaN(parseFloat(swapAmount)) || !nairaRate)
+      return "0.00";
+    const nairaValue = parseFloat(swapAmount) * nairaRate;
+    return nairaValue.toLocaleString("en-NG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
   };
 
   const handleSwap = () => {
-    // Placeholder for swap logic
-    console.log(`Swapping ${swapAmount} ${fromToken.symbol} to NGN`);
-    // TODO: Implement actual swap logic
+    if (!swapAmount || parseFloat(swapAmount) <= 0 || !nairaRate) {
+      showError("Please enter a valid amount and wait for rate");
+      return;
+    }
+    setShowSwapModal(true);
+  };
+
+  const resolveAccountName = async (accountNum: string, bankCode: string) => {
+    try {
+      const response = await fetch(
+        "https://spliting-rhq3.onrender.com/payment/verify-account",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            institution: bankCode,
+            accountIdentifier: accountNum,
+          }),
+        }
+      );
+      const data = await response.json();
+      if (data.status === "success") {
+        return data.data;
+      }
+    } catch (error) {
+      console.warn("Could not resolve account name:", error);
+    }
+    return null;
+  };
+
+  const handleAccountNumberChange = (value: string) => {
+    setAccountNumber(value);
+    // Clear account name when account number changes
+    if (value.length < 10) {
+      setAccountName("");
+    }
+  };
+
+  const handleBankChange = (bank: any) => {
+    setSelectedBank(bank);
+    // Clear account name when bank changes
+    setAccountName("");
+  };
+
+  // Resolve account name when both account number and bank are valid
+  useEffect(() => {
+    if (accountNumber.length >= 10 && selectedBank && !accountName) {
+      resolveAccountName(accountNumber, selectedBank.code)
+        .then((resolvedName) => {
+          if (resolvedName) {
+            setAccountName(resolvedName);
+          }
+        })
+        .catch((error) => {
+          console.warn("Could not resolve account name:", error);
+        });
+    }
+  }, [accountNumber, selectedBank, accountName]);
+
+  const monitorPaymentSettlement = async (orderId: string) => {
+    const checkSettlement = async () => {
+      try {
+        const response = await fetch(
+          `https://spliting-rhq3.onrender.com/payment/orders/${orderId}`
+        );
+        const data = await response.json();
+        if (data.status === "success") {
+          const settlementStatus = data.order.settlement;
+          setPaymentStatus(settlementStatus);
+
+          if (settlementStatus === "settled") {
+            // Payment settled, transaction is complete
+            showSuccess("Payment completed successfully!");
+            setPaymentOrderId(null);
+            setReceiveAddress(null);
+            setPaymentStatus(null);
+            return; // Stop monitoring
+          } else if (settlementStatus === "failed") {
+            showError("Payment settlement failed");
+            setPaymentOrderId(null);
+            setReceiveAddress(null);
+            setPaymentStatus(null);
+            return; // Stop monitoring
+          }
+        }
+      } catch (error) {
+        console.error("Error checking payment settlement:", error);
+      }
+
+      // Continue checking every 5 seconds
+      setTimeout(checkSettlement, 5000);
+    };
+
+    checkSettlement();
+  };
+
+  // Token contract addresses
+  const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
+    celo: {
+      USDC: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+      USDT: "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+      CUSD: "0x765DE816845861e75A25fCA122bb6898B8B1282a", // cUSD on Celo
+    },
+    base: {
+      USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      USDT: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
+    },
+  };
+
+  const ERC20_ABI = [
+    {
+      constant: false,
+      inputs: [
+        { name: "_to", type: "address" },
+        { name: "_value", type: "uint256" },
+      ],
+      name: "transfer",
+      outputs: [{ name: "", type: "bool" }],
+      type: "function",
+    },
+    {
+      constant: true,
+      inputs: [{ name: "_owner", type: "address" }],
+      name: "balanceOf",
+      outputs: [{ name: "balance", type: "uint256" }],
+      type: "function",
+    },
+  ];
+
+  const transferTokensToReceiveAddress = async () => {
+    if (!receiveAddress || !address) return;
+
+    try {
+      const network = isOnCelo ? "celo" : "base";
+      const networkTokens = TOKEN_ADDRESSES[network];
+      const tokenAddress = networkTokens[fromToken.symbol];
+
+      if (!tokenAddress) {
+        if (fromToken.symbol === "ETH") {
+          // Handle native ETH transfer
+          throw new Error(
+            "ETH transfers are not yet implemented. Please use ERC20 tokens."
+          );
+        }
+        throw new Error(
+          `Token ${fromToken.symbol} not supported on ${network}`
+        );
+      }
+
+      // Get token decimals - assuming 6 for stablecoins, but should be dynamic
+      const decimals =
+        fromToken.symbol === "USDC" || fromToken.symbol === "USDT" ? 6 : 18;
+      const amountInWei = BigInt(
+        Math.floor(parseFloat(swapAmount) * 10 ** decimals)
+      );
+
+      console.log(
+        `Transferring ${amountInWei} ${fromToken.symbol} (${tokenAddress}) to ${receiveAddress}`
+      );
+
+      const result = await writeContract({
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "transfer",
+        args: [receiveAddress as `0x${string}`, amountInWei],
+      });
+
+      console.log("Transfer transaction:", result);
+      showSuccess(`Tokens transferred successfully to ${receiveAddress}`);
+      return result;
+    } catch (error) {
+      console.error("Error in transferTokensToReceiveAddress:", error);
+      throw error;
+    }
+  };
+
+  const handleSend = async () => {
+    if (!accountNumber || !selectedBank) {
+      showError("Please fill in all required fields");
+      return;
+    }
+
+    // If account name is not resolved yet, try to resolve it now
+    let resolvedAccountName = accountName;
+    if (!resolvedAccountName) {
+      try {
+        resolvedAccountName = await resolveAccountName(
+          accountNumber,
+          selectedBank.code
+        );
+        if (resolvedAccountName) {
+          setAccountName(resolvedAccountName);
+        }
+      } catch (error) {
+        console.warn("Could not resolve account name:", error);
+      }
+    }
+
+    if (!resolvedAccountName) {
+      showError("Could not verify account name. Please try again.");
+      return;
+    }
+    setIsProcessingPayment(true);
+    try {
+      // Step 1: Create payment order
+      const response = await fetch(
+        "https://spliting-rhq3.onrender.com/payment",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: parseFloat(swapAmount),
+            token: fromToken.symbol,
+            network: isOnCelo ? "celo" : "base",
+            recipient: {
+              institution: selectedBank.code,
+              accountIdentifier: accountNumber,
+              currency: "NGN",
+            },
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.status === "success") {
+        const order = data.order;
+        setPaymentOrderId(order.data.id);
+        setReceiveAddress(order.data.receiveAddress);
+        setPaymentStatus("pending");
+        showSuccess("Payment order initiated successfully");
+
+        // Step 2: Transfer tokens to receiveAddress
+        await transferTokensToReceiveAddress();
+
+        // Step 3: Start monitoring payment settlement
+        monitorPaymentSettlement(order.data.id);
+
+        setShowSwapModal(false);
+        setAccountNumber("");
+        setAccountName("");
+        setSelectedBank(null);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      showError(
+        error instanceof Error ? error.message : "Failed to create payment"
+      );
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   if (!isClient) {
@@ -253,487 +606,391 @@ export default function SplitPage() {
   }
 
   return (
-    <div
-      className={`min-h-screen relative overflow-hidden ${
-        theme === "dark" ? "bg-black" : "bg-white"
-      }`}
-    >
-      <div className="absolute inset-0">
+    <>
+      <div
+        className={`min-h-screen relative overflow-hidden ${
+          theme === "dark" ? "bg-black" : "bg-white"
+        }`}
+      >
         <div className="absolute inset-0">
-          <svg
-            className="absolute inset-0 w-full h-full"
-            viewBox="0 0 1200 800"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            preserveAspectRatio="xMidYMid slice"
-          >
-            <defs>
-              <radialGradient id="neonPulse1" cx="50%" cy="50%" r="50%">
-                <stop
-                  offset="0%"
-                  stopColor={
-                    theme === "dark"
-                      ? "rgba(255,255,255,1)"
-                      : "rgba(252,254,82,1)"
-                  }
-                />
-                <stop offset="30%" stopColor="rgba(252,254,82,1)" />
-                <stop offset="70%" stopColor="rgba(252,254,82,0.8)" />
-                <stop offset="100%" stopColor="rgba(252,254,82,0)" />
-              </radialGradient>
-              <radialGradient id="neonPulse2" cx="50%" cy="50%" r="50%">
-                <stop
-                  offset="0%"
-                  stopColor={
-                    theme === "dark"
-                      ? "rgba(255,255,255,0.9)"
-                      : "rgba(252,254,82,0.9)"
-                  }
-                />
-                <stop offset="25%" stopColor="rgba(252,254,82,0.9)" />
-                <stop offset="60%" stopColor="rgba(0,65,204,0.7)" />
-                <stop offset="100%" stopColor="rgba(0,65,204,0)" />
-              </radialGradient>
-              <radialGradient id="neonPulse3" cx="50%" cy="50%" r="50%">
-                <stop
-                  offset="0%"
-                  stopColor={
-                    theme === "dark"
-                      ? "rgba(255,255,255,1)"
-                      : "rgba(252,254,82,1)"
-                  }
-                />
-                <stop offset="35%" stopColor="rgba(252,254,82,1)" />
-                <stop offset="75%" stopColor="rgba(0,65,204,0.6)" />
-                <stop offset="100%" stopColor="rgba(0,65,204,0)" />
-              </radialGradient>
-              <radialGradient id="heroTextBg" cx="30%" cy="50%" r="70%">
-                <stop offset="0%" stopColor="rgba(252,254,82,0.15)" />
-                <stop offset="40%" stopColor="rgba(252,254,82,0.08)" />
-                <stop offset="80%" stopColor="rgba(0,65,204,0.05)" />
-                <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-              </radialGradient>
-              <filter
-                id="heroTextBlur"
-                x="-50%"
-                y="-50%"
-                width="200%"
-                height="200%"
-              >
-                <feGaussianBlur stdDeviation="12" result="blur" />
-                <feTurbulence
-                  baseFrequency="0.7"
-                  numOctaves="4"
-                  result="noise"
-                />
-                <feColorMatrix
-                  in="noise"
-                  type="saturate"
-                  values="0"
-                  result="monoNoise"
-                />
-                <feComponentTransfer in="monoNoise" result="alphaAdjustedNoise">
-                  <feFuncA type="discrete" tableValues="0.03 0.06 0.09 0.12" />
-                </feComponentTransfer>
-                <feComposite
-                  in="blur"
-                  in2="alphaAdjustedNoise"
-                  operator="multiply"
-                  result="noisyBlur"
-                />
-                <feMerge>
-                  <feMergeNode in="noisyBlur" />
-                </feMerge>
-              </filter>
-              <linearGradient
-                id="threadFade1"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop
-                  offset="0%"
-                  stopColor={
-                    theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
-                  }
-                />
-                <stop offset="15%" stopColor="rgba(252,254,82,0.8)" />
-                <stop offset="85%" stopColor="rgba(252,254,82,0.8)" />
-                <stop
-                  offset="100%"
-                  stopColor={
-                    theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
-                  }
-                />
-              </linearGradient>
-              <linearGradient
-                id="threadFade2"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop
-                  offset="0%"
-                  stopColor={
-                    theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
-                  }
-                />
-                <stop offset="12%" stopColor="rgba(252,254,82,0.7)" />
-                <stop offset="88%" stopColor="rgba(252,254,82,0.7)" />
-                <stop
-                  offset="100%"
-                  stopColor={
-                    theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
-                  }
-                />
-              </linearGradient>
-              <linearGradient
-                id="threadFade3"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop
-                  offset="0%"
-                  stopColor={
-                    theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
-                  }
-                />
-                <stop offset="18%" stopColor="rgba(0,65,204,0.8)" />
-                <stop offset="82%" stopColor="rgba(0,65,204,0.8)" />
-                <stop
-                  offset="100%"
-                  stopColor={
-                    theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
-                  }
-                />
-              </linearGradient>
-              <filter
-                id="backgroundBlur"
-                x="-50%"
-                y="-50%"
-                width="200%"
-                height="200%"
-              >
-                <feGaussianBlur stdDeviation="8" result="blur" />
-                <feTurbulence
-                  baseFrequency="0.9"
-                  numOctaves="3"
-                  result="noise"
-                />
-                <feColorMatrix
-                  in="noise"
-                  type="saturate"
-                  values="0"
-                  result="monoNoise"
-                />
-                <feComponentTransfer in="monoNoise" result="alphaAdjustedNoise">
-                  <feFuncA type="discrete" tableValues="0.05 0.1 0.15 0.2" />
-                </feComponentTransfer>
-                <feComposite
-                  in="blur"
-                  in2="alphaAdjustedNoise"
-                  operator="multiply"
-                  result="noisyBlur"
-                />
-                <feMerge>
-                  <feMergeNode in="noisyBlur" />
-                </feMerge>
-              </filter>
-              <filter
-                id="neonGlow"
-                x="-50%"
-                y="-50%"
-                width="200%"
-                height="200%"
-              >
-                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                <feMerge>
-                  <feMergeNode in="coloredBlur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            <g>
-              <ellipse
-                cx="300"
-                cy="350"
-                rx="400"
-                ry="200"
-                fill="url(#heroTextBg)"
-                filter="url(#heroTextBlur)"
-                opacity="0.6"
-              />
-              <ellipse
-                cx="350"
-                cy="320"
-                rx="500"
-                ry="250"
-                fill="url(#heroTextBg)"
-                filter="url(#heroTextBlur)"
-                opacity="0.4"
-              />
-              <ellipse
-                cx="400"
-                cy="300"
-                rx="600"
-                ry="300"
-                fill="url(#heroTextBg)"
-                filter="url(#heroTextBlur)"
-                opacity="0.2"
-              />
-
-              <path
-                id="thread1"
-                d="M50 720 Q200 590 350 540 Q500 490 650 520 Q800 550 950 460 Q1100 370 1200 340"
-                stroke="url(#threadFade1)"
-                strokeWidth="0.8"
-                fill="none"
-                opacity="0.8"
-              />
-              <g filter="url(#neonGlow)">
-                <animateMotion dur="4s" repeatCount="indefinite">
-                  <mpath href="#thread1" />
-                </animateMotion>
-                <circle r="8" fill="#627EEA" opacity="0.9" />
-                <text
-                  x="0"
-                  y="4"
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize="8"
-                  fontWeight="bold"
+          <div className="absolute inset-0">
+            <svg
+              className="absolute inset-0 w-full h-full"
+              viewBox="0 0 1200 800"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              preserveAspectRatio="xMidYMid slice"
+            >
+              <defs>
+                <radialGradient id="neonPulse1" cx="50%" cy="50%" r="50%">
+                  <stop
+                    offset="0%"
+                    stopColor={
+                      theme === "dark"
+                        ? "rgba(255,255,255,1)"
+                        : "rgba(252,254,82,1)"
+                    }
+                  />
+                  <stop offset="30%" stopColor="rgba(252,254,82,1)" />
+                  <stop offset="70%" stopColor="rgba(252,254,82,0.8)" />
+                  <stop offset="100%" stopColor="rgba(252,254,82,0)" />
+                </radialGradient>
+                <radialGradient id="neonPulse2" cx="50%" cy="50%" r="50%">
+                  <stop
+                    offset="0%"
+                    stopColor={
+                      theme === "dark"
+                        ? "rgba(255,255,255,0.9)"
+                        : "rgba(252,254,82,0.9)"
+                    }
+                  />
+                  <stop offset="25%" stopColor="rgba(252,254,82,0.9)" />
+                  <stop offset="60%" stopColor="rgba(0,65,204,0.7)" />
+                  <stop offset="100%" stopColor="rgba(0,65,204,0)" />
+                </radialGradient>
+                <radialGradient id="neonPulse3" cx="50%" cy="50%" r="50%">
+                  <stop
+                    offset="0%"
+                    stopColor={
+                      theme === "dark"
+                        ? "rgba(255,255,255,1)"
+                        : "rgba(252,254,82,1)"
+                    }
+                  />
+                  <stop offset="35%" stopColor="rgba(252,254,82,1)" />
+                  <stop offset="75%" stopColor="rgba(0,65,204,0.6)" />
+                  <stop offset="100%" stopColor="rgba(0,65,204,0)" />
+                </radialGradient>
+                <radialGradient id="heroTextBg" cx="30%" cy="50%" r="70%">
+                  <stop offset="0%" stopColor="rgba(252,254,82,0.15)" />
+                  <stop offset="40%" stopColor="rgba(252,254,82,0.08)" />
+                  <stop offset="80%" stopColor="rgba(0,65,204,0.05)" />
+                  <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+                </radialGradient>
+                <filter
+                  id="heroTextBlur"
+                  x="-50%"
+                  y="-50%"
+                  width="200%"
+                  height="200%"
                 >
-                  Ξ
-                </text>
-              </g>
-
-              <path
-                id="thread2"
-                d="M80 730 Q250 620 400 570 Q550 520 700 550 Q850 580 1000 490 Q1150 400 1300 370"
-                stroke="url(#threadFade2)"
-                strokeWidth="1.5"
-                fill="none"
-                opacity="0.7"
-              />
-              <g filter="url(#neonGlow)">
-                <animateMotion dur="5s" repeatCount="indefinite">
-                  <mpath href="#thread2" />
-                </animateMotion>
-                <circle r="9" fill="#2775CA" opacity="0.9" />
-                <text
-                  x="0"
-                  y="4"
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize="7"
-                  fontWeight="bold"
+                  <feGaussianBlur stdDeviation="12" result="blur" />
+                  <feTurbulence
+                    baseFrequency="0.7"
+                    numOctaves="4"
+                    result="noise"
+                  />
+                  <feColorMatrix
+                    in="noise"
+                    type="saturate"
+                    values="0"
+                    result="monoNoise"
+                  />
+                  <feComponentTransfer
+                    in="monoNoise"
+                    result="alphaAdjustedNoise"
+                  >
+                    <feFuncA
+                      type="discrete"
+                      tableValues="0.03 0.06 0.09 0.12"
+                    />
+                  </feComponentTransfer>
+                  <feComposite
+                    in="blur"
+                    in2="alphaAdjustedNoise"
+                    operator="multiply"
+                    result="noisyBlur"
+                  />
+                  <feMerge>
+                    <feMergeNode in="noisyBlur" />
+                  </feMerge>
+                </filter>
+                <linearGradient
+                  id="threadFade1"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
                 >
-                  $
-                </text>
-              </g>
-
-              <path
-                id="thread3"
-                d="M20 710 Q180 580 320 530 Q460 480 600 510 Q740 540 880 450 Q1020 360 1200 330"
-                stroke="url(#threadFade3)"
-                strokeWidth="1.2"
-                fill="none"
-                opacity="0.8"
-              />
-              <g filter="url(#neonGlow)">
-                <animateMotion dur="4.5s" repeatCount="indefinite">
-                  <mpath href="#thread3" />
-                </animateMotion>
-                <circle r="8" fill="#FCFE52" opacity="0.9" />
-                <text
-                  x="0"
-                  y="4"
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize="8"
-                  fontWeight="bold"
+                  <stop
+                    offset="0%"
+                    stopColor={
+                      theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
+                    }
+                  />
+                  <stop offset="15%" stopColor="rgba(252,254,82,0.8)" />
+                  <stop offset="85%" stopColor="rgba(252,254,82,0.8)" />
+                  <stop
+                    offset="100%"
+                    stopColor={
+                      theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
+                    }
+                  />
+                </linearGradient>
+                <linearGradient
+                  id="threadFade2"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
                 >
-                  B
-                </text>
+                  <stop
+                    offset="0%"
+                    stopColor={
+                      theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
+                    }
+                  />
+                  <stop offset="12%" stopColor="rgba(252,254,82,0.7)" />
+                  <stop offset="88%" stopColor="rgba(252,254,82,0.7)" />
+                  <stop
+                    offset="100%"
+                    stopColor={
+                      theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
+                    }
+                  />
+                </linearGradient>
+                <linearGradient
+                  id="threadFade3"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop
+                    offset="0%"
+                    stopColor={
+                      theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
+                    }
+                  />
+                  <stop offset="18%" stopColor="rgba(0,65,204,0.8)" />
+                  <stop offset="82%" stopColor="rgba(0,65,204,0.8)" />
+                  <stop
+                    offset="100%"
+                    stopColor={
+                      theme === "dark" ? "rgba(0,0,0,1)" : "rgba(255,255,255,1)"
+                    }
+                  />
+                </linearGradient>
+                <filter
+                  id="backgroundBlur"
+                  x="-50%"
+                  y="-50%"
+                  width="200%"
+                  height="200%"
+                >
+                  <feGaussianBlur stdDeviation="8" result="blur" />
+                  <feTurbulence
+                    baseFrequency="0.9"
+                    numOctaves="3"
+                    result="noise"
+                  />
+                  <feColorMatrix
+                    in="noise"
+                    type="saturate"
+                    values="0"
+                    result="monoNoise"
+                  />
+                  <feComponentTransfer
+                    in="monoNoise"
+                    result="alphaAdjustedNoise"
+                  >
+                    <feFuncA type="discrete" tableValues="0.05 0.1 0.15 0.2" />
+                  </feComponentTransfer>
+                  <feComposite
+                    in="blur"
+                    in2="alphaAdjustedNoise"
+                    operator="multiply"
+                    result="noisyBlur"
+                  />
+                  <feMerge>
+                    <feMergeNode in="noisyBlur" />
+                  </feMerge>
+                </filter>
+                <filter
+                  id="neonGlow"
+                  x="-50%"
+                  y="-50%"
+                  width="200%"
+                  height="200%"
+                >
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <g>
+                <ellipse
+                  cx="300"
+                  cy="350"
+                  rx="400"
+                  ry="200"
+                  fill="url(#heroTextBg)"
+                  filter="url(#heroTextBlur)"
+                  opacity="0.6"
+                />
+                <ellipse
+                  cx="350"
+                  cy="320"
+                  rx="500"
+                  ry="250"
+                  fill="url(#heroTextBg)"
+                  filter="url(#heroTextBlur)"
+                  opacity="0.4"
+                />
+                <ellipse
+                  cx="400"
+                  cy="300"
+                  rx="600"
+                  ry="300"
+                  fill="url(#heroTextBg)"
+                  filter="url(#heroTextBlur)"
+                  opacity="0.2"
+                />
+
+                <path
+                  id="thread1"
+                  d="M50 720 Q200 590 350 540 Q500 490 650 520 Q800 550 950 460 Q1100 370 1200 340"
+                  stroke="url(#threadFade1)"
+                  strokeWidth="0.8"
+                  fill="none"
+                  opacity="0.8"
+                />
+                <g filter="url(#neonGlow)">
+                  <animateMotion dur="4s" repeatCount="indefinite">
+                    <mpath href="#thread1" />
+                  </animateMotion>
+                  <circle r="8" fill="#627EEA" opacity="0.9" />
+                  <text
+                    x="0"
+                    y="4"
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="8"
+                    fontWeight="bold"
+                  >
+                    Ξ
+                  </text>
+                </g>
+
+                <path
+                  id="thread2"
+                  d="M80 730 Q250 620 400 570 Q550 520 700 550 Q850 580 1000 490 Q1150 400 1300 370"
+                  stroke="url(#threadFade2)"
+                  strokeWidth="1.5"
+                  fill="none"
+                  opacity="0.7"
+                />
+                <g filter="url(#neonGlow)">
+                  <animateMotion dur="5s" repeatCount="indefinite">
+                    <mpath href="#thread2" />
+                  </animateMotion>
+                  <circle r="9" fill="#2775CA" opacity="0.9" />
+                  <text
+                    x="0"
+                    y="4"
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="7"
+                    fontWeight="bold"
+                  >
+                    $
+                  </text>
+                </g>
+
+                <path
+                  id="thread3"
+                  d="M20 710 Q180 580 320 530 Q460 480 600 510 Q740 540 880 450 Q1020 360 1200 330"
+                  stroke="url(#threadFade3)"
+                  strokeWidth="1.2"
+                  fill="none"
+                  opacity="0.8"
+                />
+                <g filter="url(#neonGlow)">
+                  <animateMotion dur="4.5s" repeatCount="indefinite">
+                    <mpath href="#thread3" />
+                  </animateMotion>
+                  <circle r="8" fill="#FCFE52" opacity="0.9" />
+                  <text
+                    x="0"
+                    y="4"
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="8"
+                    fontWeight="bold"
+                  >
+                    B
+                  </text>
+                </g>
               </g>
-            </g>
-          </svg>
-        </div>
-      </div>
-
-      <style jsx>{`
-        @keyframes flow {
-          0%,
-          100% {
-            opacity: 0.3;
-            stroke-dasharray: 0 100;
-            stroke-dashoffset: 0;
-          }
-          50% {
-            opacity: 0.8;
-            stroke-dasharray: 50 50;
-            stroke-dashoffset: -25;
-          }
-        }
-        @keyframes pulse1 {
-          0%,
-          100% {
-            opacity: 0.4;
-            transform: scale(0.8);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.2);
-          }
-        }
-        @keyframes pulse2 {
-          0%,
-          100% {
-            opacity: 0.3;
-            transform: scale(0.9);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.1);
-          }
-        }
-        @keyframes pulse3 {
-          0%,
-          100% {
-            opacity: 0.5;
-            transform: scale(0.7);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.3);
-          }
-        }
-      `}</style>
-
-      <header className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 lg:px-12">
-        <div className="flex items-center space-x-2 pl-3 sm:pl-6 lg:pl-12">
-          <h1
-            className={`${
-              theme === "dark" ? "text-white" : "text-black"
-            } text-2xl sm:text-3xl font-bold font-[family-name:var(--font-share-tech-mono)] tracking-wider`}
-          >
-            SPLIT
-          </h1>
+            </svg>
+          </div>
         </div>
 
-        {/* Right side: Theme switcher and back to home button */}
-        <div className="flex items-center gap-2 pr-3 sm:pr-6 lg:pr-12">
-          <button
-            onClick={toggleTheme}
-            className={`flex items-center gap-2 ${
-              theme === "dark"
-                ? "bg-white/10 hover:bg-white/20"
-                : "bg-black/10 hover:bg-black/20"
-            } backdrop-blur-sm border ${
-              theme === "dark" ? "border-white/20" : "border-black/20"
-            } rounded-xl px-4 py-2.5 w-fit transition-all duration-300`}
-          >
-            {theme === "dark" ? (
-              <>
-                <Sun className="w-5 h-5 text-white" />
-                <span className="text-white text-sm font-medium">
-                  Light Mode
-                </span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-5 h-5 text-black" />
-                <span className="text-black text-sm font-medium">
-                  Dark Mode
-                </span>
-              </>
-            )}
-          </button>
+        <style jsx>{`
+          @keyframes flow {
+            0%,
+            100% {
+              opacity: 0.3;
+              stroke-dasharray: 0 100;
+              stroke-dashoffset: 0;
+            }
+            50% {
+              opacity: 0.8;
+              stroke-dasharray: 50 50;
+              stroke-dashoffset: -25;
+            }
+          }
+          @keyframes pulse1 {
+            0%,
+            100% {
+              opacity: 0.4;
+              transform: scale(0.8);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.2);
+            }
+          }
+          @keyframes pulse2 {
+            0%,
+            100% {
+              opacity: 0.3;
+              transform: scale(0.9);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.1);
+            }
+          }
+          @keyframes pulse3 {
+            0%,
+            100% {
+              opacity: 0.5;
+              transform: scale(0.7);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.3);
+            }
+          }
+        `}</style>
 
-          <Link href="/">
-            <Button
-              variant="outline"
+        <header className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 lg:px-12">
+          <div className="flex items-center space-x-2 pl-3 sm:pl-6 lg:pl-12">
+            <h1
               className={`${
-                theme === "dark"
-                  ? "border-white/20 hover:bg-white/10 text-white"
-                  : "border-black/20 hover:bg-black/10 text-black"
-              } flex items-center gap-2`}
+                theme === "dark" ? "text-white" : "text-black"
+              } text-2xl sm:text-3xl font-bold font-[family-name:var(--font-share-tech-mono)] tracking-wider`}
             >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Home</span>
-            </Button>
-          </Link>
-        </div>
-      </header>
+              SPLIT
+            </h1>
+          </div>
 
-      {mobileMenuOpen && (
-        <div
-          className={`md:hidden fixed inset-0 top-16 ${
-            theme === "dark" ? "bg-black/95" : "bg-white/95"
-          } backdrop-blur-sm z-20`}
-          onClick={closeMobileMenu}
-        >
-          <nav className="flex flex-col space-y-2 px-6 py-6 font-[family-name:var(--font-rajdhani)] text-xs">
-            <Link
-              href="/"
-              className={`${
-                theme === "dark"
-                  ? "text-white/80 hover:text-white"
-                  : "text-black/80 hover:text-black"
-              } transition-colors font-medium`}
-              onClick={closeMobileMenu}
-            >
-              Home
-            </Link>
-            <Link
-              href="/split"
-              className={`${
-                theme === "dark"
-                  ? "text-white/80 hover:text-white"
-                  : "text-black/80 hover:text-black"
-              } transition-colors font-medium`}
-              onClick={closeMobileMenu}
-            >
-              Split
-            </Link>
-            <Link
-              href="/about"
-              className={`${
-                theme === "dark"
-                  ? "text-white/80 hover:text-white"
-                  : "text-black/80 hover:text-black"
-              } transition-colors font-medium`}
-              onClick={closeMobileMenu}
-            >
-              About
-            </Link>
-            <Link
-              href="/contact"
-              className={`${
-                theme === "dark"
-                  ? "text-white/80 hover:text-white"
-                  : "text-black/80 hover:text-black"
-              } transition-colors font-medium`}
-              onClick={closeMobileMenu}
-            >
-              Contact
-            </Link>
-            <Link
-              href="/dashboard"
-              className={`${
-                theme === "dark"
-                  ? "text-white/80 hover:text-white"
-                  : "text-black/80 hover:text-black"
-              } transition-colors font-medium`}
-              onClick={closeMobileMenu}
-            >
-              Dashboard
-            </Link>
+          {/* Right side: Theme switcher and back to home button */}
+          <div className="flex items-center gap-2 pr-3 sm:pr-6 lg:pr-12">
             <button
               onClick={toggleTheme}
               className={`flex items-center gap-2 ${
@@ -760,695 +1017,731 @@ export default function SplitPage() {
                 </>
               )}
             </button>
-          </nav>
-        </div>
-      )}
 
-      <main className="relative z-10 px-4 sm:px-6 lg:px-12 max-w-6xl mx-auto py-8">
-        <div className="space-y-8">
-          <div className="text-center">
-            <h1
-              className={`${
-                theme === "dark" ? "text-white" : "text-black"
-              } text-base sm:text-lg md:text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight mb-4 font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
-            >
-              SPLIT DASHBOARD
-            </h1>
-            <p
-              className={`${
-                theme === "dark" ? "text-white/70" : "text-black/70"
-              } text-lg mb-8`}
-            >
-              Manage your payment splits and transactions
-            </p>
+            <Link href="/">
+              <Button
+                variant="outline"
+                className={`${
+                  theme === "dark"
+                    ? "border-white/20 hover:bg-white/10 text-white"
+                    : "border-black/20 hover:bg-black/10 text-black"
+                } flex items-center gap-2`}
+              >
+                <Home className="w-4 h-4" />
+                <span className="hidden sm:inline">Home</span>
+              </Button>
+            </Link>
           </div>
+        </header>
 
-          {/* Dashboard Buttons */}
-          <div className="grid grid-cols-1 sm:flex sm:flex-row sm:justify-center lg:grid lg:grid-cols-4 gap-6 mb-12">
-            <Button
-              onClick={() => handleViewChange("createSplit")}
-              variant={activeView === "createSplit" ? "default" : "outline"}
-              className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                activeView === "createSplit"
-                  ? "bg-[#FCFE52] text-black border-[#FCFE52]"
-                  : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
-              }`}
-            >
-              <Plus className="w-8 h-8" />
-              <span className="hidden sm:block text-lg font-semibold">
-                Create Split
-              </span>
-            </Button>
-
-            <Button
-              onClick={() => handleViewChange("mySplits")}
-              variant={activeView === "mySplits" ? "default" : "outline"}
-              className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                activeView === "mySplits"
-                  ? "bg-[#FCFE52] text-black border-[#FCFE52]"
-                  : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
-              }`}
-            >
-              <FileText className="w-8 h-8" />
-              <span className="hidden sm:block text-lg font-semibold">
-                My Splits
-              </span>
-            </Button>
-
-            <Button
-              onClick={() => handleViewChange("swap")}
-              variant={activeView === "swap" ? "default" : "outline"}
-              className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                activeView === "swap"
-                  ? "bg-[#FCFE52] text-black border-[#FCFE52]"
-                  : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
-              }`}
-            >
-              <ArrowRightLeft className="w-8 h-8" />
-              <span className="hidden sm:block text-lg font-semibold">
-                Swap
-              </span>
-            </Button>
-
-            <Button
-              onClick={() => handleViewChange("transactions")}
-              variant={activeView === "transactions" ? "default" : "outline"}
-              className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                activeView === "transactions"
-                  ? "bg-[#FCFE52] text-black border-[#FCFE52]"
-                  : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
-              }`}
-            >
-              <History className="w-8 h-8" />
-              <span className="hidden sm:block text-lg font-semibold">
-                Transactions
-              </span>
-            </Button>
+        {mobileMenuOpen && (
+          <div
+            className={`md:hidden fixed inset-0 top-16 ${
+              theme === "dark" ? "bg-black/95" : "bg-white/95"
+            } backdrop-blur-sm z-20`}
+            onClick={closeMobileMenu}
+          >
+            <nav className="flex flex-col space-y-2 px-6 py-6 font-[family-name:var(--font-rajdhani)] text-xs">
+              <Link
+                href="/"
+                className={`${
+                  theme === "dark"
+                    ? "text-white/80 hover:text-white"
+                    : "text-black/80 hover:text-black"
+                } transition-colors font-medium`}
+                onClick={closeMobileMenu}
+              >
+                Home
+              </Link>
+              <Link
+                href="/split"
+                className={`${
+                  theme === "dark"
+                    ? "text-white/80 hover:text-white"
+                    : "text-black/80 hover:text-black"
+                } transition-colors font-medium`}
+                onClick={closeMobileMenu}
+              >
+                Split
+              </Link>
+              <Link
+                href="/about"
+                className={`${
+                  theme === "dark"
+                    ? "text-white/80 hover:text-white"
+                    : "text-black/80 hover:text-black"
+                } transition-colors font-medium`}
+                onClick={closeMobileMenu}
+              >
+                About
+              </Link>
+              <Link
+                href="/contact"
+                className={`${
+                  theme === "dark"
+                    ? "text-white/80 hover:text-white"
+                    : "text-black/80 hover:text-black"
+                } transition-colors font-medium`}
+                onClick={closeMobileMenu}
+              >
+                Contact
+              </Link>
+              <Link
+                href="/dashboard"
+                className={`${
+                  theme === "dark"
+                    ? "text-white/80 hover:text-white"
+                    : "text-black/80 hover:text-black"
+                } transition-colors font-medium`}
+                onClick={closeMobileMenu}
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={toggleTheme}
+                className={`flex items-center gap-2 ${
+                  theme === "dark"
+                    ? "bg-white/10 hover:bg-white/20"
+                    : "bg-black/10 hover:bg-black/20"
+                } backdrop-blur-sm border ${
+                  theme === "dark" ? "border-white/20" : "border-black/20"
+                } rounded-xl px-4 py-2.5 w-fit transition-all duration-300`}
+              >
+                {theme === "dark" ? (
+                  <>
+                    <Sun className="w-5 h-5 text-white" />
+                    <span className="text-white text-sm font-medium">
+                      Light Mode
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-5 h-5 text-black" />
+                    <span className="text-black text-sm font-medium">
+                      Dark Mode
+                    </span>
+                  </>
+                )}
+              </button>
+            </nav>
           </div>
+        )}
 
-          {/* Content Area - Show different views based on selected action */}
-          <div ref={contentRef} className="space-y-8">
-            {activeView === "default" && (
-              <>
-                {/* Default view - show wallet connection and recent splits */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Wallet Connection Section */}
-                  <Card className="border border-white/20 bg-black/50 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-white font-[family-name:var(--font-share-tech-mono)]">
-                        <Wallet className="w-5 h-5" />
-                        {isConnected ? "Wallet Connected" : "Connect Wallet"}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {isConnected ? (
-                        <div className="space-y-4">
-                          <div className="p-4 bg-white/10 rounded-lg">
-                            <p className="text-sm text-white/70 mb-2">
-                              Connected Address:
-                            </p>
-                            <p className="font-mono text-white text-sm">
-                              {formatAddress(address!)}
-                            </p>
-                            <p className="text-xs text-white/50 mt-1">
-                              Network: {chain?.name || "Unknown"}
-                            </p>
-                          </div>
+        <main className="relative z-10 px-4 sm:px-6 lg:px-12 max-w-6xl mx-auto py-8">
+          <div className="space-y-8">
+            <div className="text-center">
+              <h1
+                className={`${
+                  theme === "dark" ? "text-white" : "text-black"
+                } text-base sm:text-lg md:text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight mb-4 font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
+              >
+                SPLIT DASHBOARD
+              </h1>
+              <p
+                className={`${
+                  theme === "dark" ? "text-white/70" : "text-black/70"
+                } text-lg mb-8`}
+              >
+                Manage your payment splits and transactions
+              </p>
+            </div>
 
-                          {!isOnCelo && (
-                            <Button
-                              onClick={handleSwitchNetwork}
-                              className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                            >
-                              Switch to Celo
-                            </Button>
-                          )}
+            {/* Dashboard Buttons */}
+            <div className="grid grid-cols-1 sm:flex sm:flex-row sm:justify-center lg:grid lg:grid-cols-4 gap-6 mb-12">
+              <Button
+                onClick={() => handleViewChange("createSplit")}
+                variant={activeView === "createSplit" ? "default" : "outline"}
+                className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
+                  activeView === "createSplit"
+                    ? "bg-[#FCFE52] text-black border-[#FCFE52]"
+                    : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
+                }`}
+              >
+                <Plus className="w-8 h-8" />
+                <span className="hidden sm:block text-lg font-semibold">
+                  Create Split
+                </span>
+              </Button>
 
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={handleDisconnect}
-                              variant="outline"
-                              className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10"
-                            >
-                              Disconnect
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                window.open(
-                                  `https://celoscan.io/address/${address}`,
-                                  "_blank"
-                                )
-                              }
-                              variant="outline"
-                              className="border-white/20 hover:bg-white/10"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <p className="text-sm text-white/70">
-                            Choose a wallet to connect to the application
-                          </p>
+              <Button
+                onClick={() => handleViewChange("mySplits")}
+                variant={activeView === "mySplits" ? "default" : "outline"}
+                className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
+                  activeView === "mySplits"
+                    ? "bg-[#FCFE52] text-black border-[#FCFE52]"
+                    : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
+                }`}
+              >
+                <FileText className="w-8 h-8" />
+                <span className="hidden sm:block text-lg font-semibold">
+                  My Splits
+                </span>
+              </Button>
 
-                          <div className="relative">
-                            <Button
-                              onClick={() =>
-                                setShowWalletOptions(!showWalletOptions)
-                              }
-                              className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black flex items-center justify-between"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Wallet className="w-4 h-4" />
-                                <span>Select Wallet</span>
-                              </div>
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform ${
-                                  showWalletOptions ? "rotate-180" : ""
-                                }`}
-                              />
-                            </Button>
+              <Button
+                onClick={() => handleViewChange("swap")}
+                variant={activeView === "swap" ? "default" : "outline"}
+                className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
+                  activeView === "swap"
+                    ? "bg-[#FCFE52] text-black border-[#FCFE52]"
+                    : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
+                }`}
+              >
+                <ArrowRightLeft className="w-8 h-8" />
+                <span className="hidden sm:block text-lg font-semibold">
+                  Swap
+                </span>
+              </Button>
 
-                            {showWalletOptions && (
-                              <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 border border-white/20 rounded-lg overflow-hidden z-10">
-                                {connectors.map((connector) => (
-                                  <Button
-                                    key={connector.id}
-                                    onClick={() => handleConnect(connector)}
-                                    disabled={isPending}
-                                    className="w-full justify-start bg-transparent hover:bg-white/10 border-0 text-white rounded-none h-12"
-                                    variant="ghost"
-                                  >
-                                    <Wallet className="w-4 h-4 mr-3" />
-                                    {connector.name}
-                                    {isPending && " (Connecting...)"}
-                                  </Button>
-                                ))}
-                              </div>
+              <Button
+                onClick={() => handleViewChange("transactions")}
+                variant={activeView === "transactions" ? "default" : "outline"}
+                className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
+                  activeView === "transactions"
+                    ? "bg-[#FCFE52] text-black border-[#FCFE52]"
+                    : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
+                }`}
+              >
+                <History className="w-8 h-8" />
+                <span className="hidden sm:block text-lg font-semibold">
+                  Transactions
+                </span>
+              </Button>
+            </div>
+
+            {/* Content Area - Show different views based on selected action */}
+            <div ref={contentRef} className="space-y-8">
+              {activeView === "createSplit" && (
+                <>
+                  {/* Default view - show wallet connection and recent splits */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Wallet Connection Section */}
+                    <Card className="border border-white/20 bg-black/50 backdrop-blur-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-white font-[family-name:var(--font-share-tech-mono)]">
+                          <Wallet className="w-5 h-5" />
+                          {isConnected ? "Wallet Connected" : "Connect Wallet"}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {isConnected ? (
+                          <div className="space-y-4">
+                            <div className="p-4 bg-white/10 rounded-lg">
+                              <p className="text-sm text-white/70 mb-2">
+                                Connected Address:
+                              </p>
+                              <p className="font-mono text-white text-sm">
+                                {formatAddress(address!)}
+                              </p>
+                              <p className="text-xs text-white/50 mt-1">
+                                Network: {chain?.name || "Unknown"}
+                              </p>
+                            </div>
+
+                            {!isOnSupportedNetwork && (
+                              <Button
+                                onClick={handleSwitchNetwork}
+                                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                              >
+                                Switch to Supported Network
+                              </Button>
                             )}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
 
-                  {/* Split Creation Form - Only show if wallet is connected and on correct network */}
-                  {isConnected && isOnCelo && (
-                    <div className="border border-white">
-                      <SplitCreationForm
-                        theme={theme}
-                        onSplitCreated={handleSplitCreated}
-                      />
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={handleDisconnect}
+                                variant="outline"
+                                className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10"
+                              >
+                                Disconnect
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  window.open(
+                                    `https://celoscan.io/address/${address}`,
+                                    "_blank"
+                                  )
+                                }
+                                variant="outline"
+                                className="border-white/20 hover:bg-white/10"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <p className="text-sm text-white/70">
+                              Choose a wallet to connect to the application
+                            </p>
+
+                            <div className="relative">
+                              <Button
+                                onClick={() =>
+                                  setShowWalletOptions(!showWalletOptions)
+                                }
+                                className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Wallet className="w-4 h-4" />
+                                  <span>Select Wallet</span>
+                                </div>
+                                <ChevronDown
+                                  className={`w-4 h-4 transition-transform ${
+                                    showWalletOptions ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </Button>
+
+                              {showWalletOptions && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 border border-white/20 rounded-lg overflow-hidden z-10">
+                                  {connectors.map((connector) => (
+                                    <Button
+                                      key={connector.id}
+                                      onClick={() => handleConnect(connector)}
+                                      disabled={isPending}
+                                      className="w-full justify-start bg-transparent hover:bg-white/10 border-0 text-white rounded-none h-12"
+                                      variant="ghost"
+                                    >
+                                      <Wallet className="w-4 h-4 mr-3" />
+                                      {connector.name}
+                                      {isPending && " (Connecting...)"}
+                                    </Button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Split Creation Form - Only show if wallet is connected and on correct network */}
+                    {isConnected && isOnSupportedNetwork && (
+                      <div className="border border-white">
+                        <SplitCreationForm
+                          theme={theme}
+                          onSplitCreated={handleSplitCreated}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {activeView === "mySplits" && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2
+                      className={`${
+                        theme === "dark" ? "text-white" : "text-black"
+                      } text-xl font-bold font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
+                    >
+                      My Splits
+                    </h2>
+                    <Button
+                      onClick={() => handleViewChange("createSplit")}
+                      variant="outline"
+                      className={`${
+                        theme === "dark"
+                          ? "border-white/20 hover:bg-white/10 text-white"
+                          : "border-black/20 hover:bg-black/10 text-black"
+                      }`}
+                    >
+                      Back to Dashboard
+                    </Button>
+                  </div>
+
+                  {isConnected &&
+                    isOnSupportedNetwork &&
+                    userSplits.length > 0 && (
+                      <motion.div
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          hidden: { opacity: 0 },
+                          visible: {
+                            opacity: 1,
+                            transition: {
+                              staggerChildren: 0.1,
+                            },
+                          },
+                        }}
+                      >
+                        {userSplits.map((split, index) => (
+                          <motion.div
+                            key={split.address}
+                            variants={{
+                              hidden: { opacity: 0, y: 20 },
+                              visible: { opacity: 1, y: 0 },
+                            }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            <SplitCard
+                              splitAddress={split.address}
+                              token={split.token}
+                              createdAt={split.createdAt}
+                              theme={theme}
+                            />
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    )}
+
+                  {isConnected &&
+                    isOnSupportedNetwork &&
+                    userSplits.length === 0 && (
+                      <div className="text-center py-12">
+                        <p
+                          className={`${
+                            theme === "dark" ? "text-white/50" : "text-black/50"
+                          } text-lg`}
+                        >
+                          No splits created yet. Create your first split above!
+                        </p>
+                      </div>
+                    )}
+
+                  {!isConnected && (
+                    <div className="text-center py-12">
+                      <p
+                        className={`${
+                          theme === "dark" ? "text-white/50" : "text-black/50"
+                        } text-lg`}
+                      >
+                        Connect your wallet to view your splits.
+                      </p>
+                    </div>
+                  )}
+
+                  {isConnected && !isOnSupportedNetwork && (
+                    <div className="text-center py-12">
+                      <p
+                        className={`${
+                          theme === "dark" ? "text-white/50" : "text-black/50"
+                        } text-lg`}
+                      >
+                        Please switch to a supported network (Celo or Base) to
+                        view your splits.
+                      </p>
                     </div>
                   )}
                 </div>
-              </>
-            )}
+              )}
 
-            {activeView === "mySplits" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2
-                    className={`${
-                      theme === "dark" ? "text-white" : "text-black"
-                    } text-xl font-bold font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
-                  >
-                    My Splits
-                  </h2>
-                  <Button
-                    onClick={() => handleViewChange("default")}
-                    variant="outline"
-                    className={`${
-                      theme === "dark"
-                        ? "border-white/20 hover:bg-white/10 text-white"
-                        : "border-black/20 hover:bg-black/10 text-black"
-                    }`}
-                  >
-                    Back to Dashboard
-                  </Button>
-                </div>
-
-                {isConnected && isOnCelo && userSplits.length > 0 && (
-                  <motion.div
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    initial="hidden"
-                    animate="visible"
-                    variants={{
-                      hidden: { opacity: 0 },
-                      visible: {
-                        opacity: 1,
-                        transition: {
-                          staggerChildren: 0.1,
-                        },
-                      },
-                    }}
-                  >
-                    {userSplits.map((split, index) => (
-                      <motion.div
-                        key={split.address}
-                        variants={{
-                          hidden: { opacity: 0, y: 20 },
-                          visible: { opacity: 1, y: 0 },
-                        }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <SplitCard
-                          splitAddress={split.address}
-                          token={split.token}
-                          createdAt={split.createdAt}
-                          theme={theme}
-                        />
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                )}
-
-                {isConnected && isOnCelo && userSplits.length === 0 && (
-                  <div className="text-center py-12">
-                    <p
-                      className={`${
-                        theme === "dark" ? "text-white/50" : "text-black/50"
-                      } text-lg`}
-                    >
-                      No splits created yet. Create your first split above!
-                    </p>
-                  </div>
-                )}
-
-                {!isConnected && (
-                  <div className="text-center py-12">
-                    <p
-                      className={`${
-                        theme === "dark" ? "text-white/50" : "text-black/50"
-                      } text-lg`}
-                    >
-                      Connect your wallet to view your splits.
-                    </p>
-                  </div>
-                )}
-
-                {isConnected && !isOnCelo && (
-                  <div className="text-center py-12">
-                    <p
-                      className={`${
-                        theme === "dark" ? "text-white/50" : "text-black/50"
-                      } text-lg`}
-                    >
-                      Please switch to Celo network to view your splits.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeView === "swap" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2
-                    className={`${
-                      theme === "dark" ? "text-white" : "text-black"
-                    } text-xl font-bold font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
-                  >
-                    Token Swap
-                  </h2>
-                  <Button
-                    onClick={() => handleViewChange("default")}
-                    variant="outline"
-                    className={`${
-                      theme === "dark"
-                        ? "border-white/20 hover:bg-white/10 text-white"
-                        : "border-black/20 hover:bg-black/10 text-black"
-                    }`}
-                  >
-                    Back to Dashboard
-                  </Button>
-                </div>
-
-                <Card
-                  className={`${
-                    theme === "dark"
-                      ? "bg-black/50 border-white/10"
-                      : "bg-white/50 border-black/10"
-                  } backdrop-blur-sm`}
-                >
-                  <CardHeader>
-                    <CardTitle
+              {activeView === "swap" && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2
                       className={`${
                         theme === "dark" ? "text-white" : "text-black"
-                      } font-[family-name:var(--font-share-tech-mono)]`}
+                      } text-xl font-bold font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
                     >
-                      Swap Tokens
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-4">
-                      <TokenSelector
-                        selectedToken={fromToken}
-                        onTokenSelect={setFromToken}
-                        tokens={availableTokens}
-                        theme={theme}
-                        label="From Token"
-                      />
+                      Token Swap
+                    </h2>
+                    <Button
+                      onClick={() => handleViewChange("createSplit")}
+                      variant="outline"
+                      className={`${
+                        theme === "dark"
+                          ? "border-white/20 hover:bg-white/10 text-white"
+                          : "border-black/20 hover:bg-black/10 text-black"
+                      }`}
+                    >
+                      Back to Dashboard
+                    </Button>
+                  </div>
 
-                      <div className="space-y-2">
-                        <label
-                          className={`text-sm ${
-                            theme === "dark" ? "text-white/70" : "text-black/70"
-                          }`}
-                        >
-                          Amount
-                        </label>
-                        <input
-                          type="number"
-                          value={swapAmount}
-                          onChange={(e) => setSwapAmount(e.target.value)}
-                          placeholder="Enter amount"
-                          className={`w-full p-3 border rounded-lg ${
-                            theme === "dark"
-                              ? "bg-black/50 border-white/20 text-white placeholder-white/50"
-                              : "bg-white/50 border-black/20 text-black placeholder-black/50"
-                          }`}
+                  <Card
+                    className={`${
+                      theme === "dark"
+                        ? "bg-black/50 border-white/10"
+                        : "bg-white/50 border-black/10"
+                    } backdrop-blur-sm`}
+                  >
+                    <CardHeader>
+                      <CardTitle
+                        className={`${
+                          theme === "dark" ? "text-white" : "text-black"
+                        } font-[family-name:var(--font-share-tech-mono)]`}
+                      >
+                        Swap Tokens
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-4">
+                        <TokenSelector
+                          selectedToken={fromToken}
+                          onTokenSelect={(token) => setFromToken(token)}
+                          tokens={availableTokens}
+                          theme={theme}
+                          label="From Token"
                         />
-                      </div>
 
-                      <div className="space-y-2">
-                        <label
-                          className={`text-sm ${
-                            theme === "dark" ? "text-white/70" : "text-black/70"
-                          }`}
-                        >
-                          To Token
-                        </label>
-                        <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-100 dark:bg-gray-800">
-                          <span className="text-lg">{nairaToken.icon}</span>
-                          <span
-                            className={
-                              theme === "dark" ? "text-white" : "text-black"
-                            }
-                          >
-                            {nairaToken.symbol}
-                          </span>
-                          <span
+                        {pricesLoading && (
+                          <div className="text-center py-2">
+                            <p
+                              className={`text-sm ${
+                                theme === "dark"
+                                  ? "text-white/70"
+                                  : "text-black/70"
+                              }`}
+                            >
+                              Loading live prices...
+                            </p>
+                          </div>
+                        )}
+
+                        {pricesError && (
+                          <div className="text-center py-2">
+                            <p className={`text-sm text-red-500`}>
+                              Failed to load prices. Using cached values.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <label
                             className={`text-sm ${
                               theme === "dark"
                                 ? "text-white/70"
                                 : "text-black/70"
                             }`}
                           >
-                            {nairaToken.name}
-                          </span>
-                          <span
+                            Amount
+                          </label>
+                          <input
+                            type="number"
+                            value={swapAmount}
+                            onChange={(e) => setSwapAmount(e.target.value)}
+                            placeholder="Enter amount"
+                            className={`w-full p-3 border rounded-lg ${
+                              theme === "dark"
+                                ? "bg-black/50 border-white/20 text-white placeholder-white/50"
+                                : "bg-white/50 border-black/20 text-black placeholder-black/50"
+                            }`}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
                             className={`text-sm ${
+                              theme === "dark"
+                                ? "text-white/70"
+                                : "text-black/70"
+                            }`}
+                          >
+                            To Token
+                          </label>
+                          <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-100 dark:bg-gray-800">
+                            <span className="text-lg">{nairaToken.icon}</span>
+                            <span
+                              className={
+                                theme === "dark" ? "text-white" : "text-black"
+                              }
+                            >
+                              {nairaToken.symbol}
+                            </span>
+                            <span
+                              className={`text-sm ${
+                                theme === "dark"
+                                  ? "text-white/70"
+                                  : "text-black/70"
+                              }`}
+                            >
+                              {nairaToken.name}
+                            </span>
+                            <span
+                              className={`text-sm ${
+                                theme === "dark"
+                                  ? "text-white/50"
+                                  : "text-black/50"
+                              } ml-auto`}
+                            >
+                              {nairaToken.price}
+                            </span>
+                          </div>
+                        </div>
+                        {rateLoading && (
+                          <div className="text-center py-2">
+                            <p
+                              className={`text-sm ${
+                                theme === "dark"
+                                  ? "text-white/70"
+                                  : "text-black/70"
+                              }`}
+                            >
+                              Loading rate...
+                            </p>
+                          </div>
+                        )}
+
+                        {rateError && (
+                          <div className="text-center py-2">
+                            <p className="text-sm text-red-500">{rateError}</p>
+                          </div>
+                        )}
+
+                        {/* Naira Equivalent Display */}
+                        {swapAmount && parseFloat(swapAmount) > 0 && (
+                          <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                            <span
+                              className={`text-sm ${
+                                theme === "dark"
+                                  ? "text-white/70"
+                                  : "text-black/70"
+                              }`}
+                            >
+                              You will receive:
+                            </span>
+                            <span
+                              className={`text-lg font-semibold ${
+                                theme === "dark"
+                                  ? "text-green-400"
+                                  : "text-green-600"
+                              }`}
+                            >
+                              ₦{calculateNairaEquivalent()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        onClick={handleSwap}
+                        className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black"
+                        disabled={!swapAmount || parseFloat(swapAmount) <= 0}
+                      >
+                        Swap to Naira
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {activeView === "transactions" && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2
+                      className={`${
+                        theme === "dark" ? "text-white" : "text-black"
+                      } text-xl font-bold font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
+                    >
+                      Transaction History
+                    </h2>
+                    <Button
+                      onClick={() => handleViewChange("createSplit")}
+                      variant="outline"
+                      className={`${
+                        theme === "dark"
+                          ? "border-white/20 hover:bg-white/10 text-black"
+                          : "border-black/20 hover:bg-black/10 text-black"
+                      }`}
+                    >
+                      Back to Dashboard
+                    </Button>
+                  </div>
+
+                  <Card
+                    className={`${
+                      theme === "dark"
+                        ? "bg-black/50 border-white/10"
+                        : "bg-white/50 border-black/10"
+                    } backdrop-blur-sm`}
+                  >
+                    <CardHeader>
+                      <CardTitle
+                        className={`${
+                          theme === "dark" ? "text-white" : "text-black"
+                        } font-[family-name:var(--font-share-tech-mono)]`}
+                      >
+                        Recent Transactions
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="text-center py-8">
+                          <p
+                            className={`text-lg ${
                               theme === "dark"
                                 ? "text-white/50"
                                 : "text-black/50"
-                            } ml-auto`}
+                            }`}
                           >
-                            {nairaToken.price}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Naira Equivalent Display */}
-                      {swapAmount && parseFloat(swapAmount) > 0 && (
-                        <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                          <span
+                            No transactions yet
+                          </p>
+                          <p
                             className={`text-sm ${
                               theme === "dark"
-                                ? "text-white/70"
-                                : "text-black/70"
-                            }`}
+                                ? "text-white/30"
+                                : "text-black/30"
+                            } mt-2`}
                           >
-                            You will receive:
-                          </span>
-                          <span
-                            className={`text-lg font-semibold ${
-                              theme === "dark"
-                                ? "text-green-400"
-                                : "text-green-600"
-                            }`}
-                          >
-                            ₦{calculateNairaEquivalent()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      onClick={handleSwap}
-                      className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black"
-                      disabled={!swapAmount || parseFloat(swapAmount) <= 0}
-                    >
-                      Swap to Naira
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {activeView === "createSplit" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2
-                    className={`${
-                      theme === "dark" ? "text-white" : "text-black"
-                    } text-xl font-bold font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
-                  >
-                    Create New Split
-                  </h2>
-                  <Button
-                    onClick={() => handleViewChange("default")}
-                    variant="outline"
-                    className={`${
-                      theme === "dark"
-                        ? "border-white/20 hover:bg-white/10 text-white"
-                        : "border-black/20 hover:bg-black/10 text-black"
-                    }`}
-                  >
-                    Back to Dashboard
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Wallet Connection Section */}
-                  <Card className="border border-white/20 bg-black/50 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-white font-[family-name:var(--font-share-tech-mono)]">
-                        <Wallet className="w-5 h-5" />
-                        {isConnected ? "Wallet Connected" : "Connect Wallet"}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {isConnected ? (
-                        <div className="space-y-4">
-                          <div className="p-4 bg-white/10 rounded-lg">
-                            <p className="text-sm text-white/70 mb-2">
-                              Connected Address:
-                            </p>
-                            <p className="font-mono text-white text-sm">
-                              {formatAddress(address!)}
-                            </p>
-                            <p className="text-xs text-white/50 mt-1">
-                              Network: {chain?.name || "Unknown"}
-                            </p>
-                          </div>
-
-                          {!isOnCelo && (
-                            <Button
-                              onClick={handleSwitchNetwork}
-                              className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                            >
-                              Switch to Celo
-                            </Button>
-                          )}
-
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={handleDisconnect}
-                              variant="outline"
-                              className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10"
-                            >
-                              Disconnect
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                window.open(
-                                  `https://celoscan.io/address/${address}`,
-                                  "_blank"
-                                )
-                              }
-                              variant="outline"
-                              className="border-white/20 hover:bg-white/10"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <p className="text-sm text-white/70">
-                            Choose a wallet to connect to the application
+                            Your transaction history will appear here
                           </p>
-
-                          <div className="relative">
-                            <Button
-                              onClick={() =>
-                                setShowWalletOptions(!showWalletOptions)
-                              }
-                              className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black flex items-center justify-between"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Wallet className="w-4 h-4" />
-                                <span>Select Wallet</span>
-                              </div>
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform ${
-                                  showWalletOptions ? "rotate-180" : ""
-                                }`}
-                              />
-                            </Button>
-
-                            {showWalletOptions && (
-                              <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 border border-white/20 rounded-lg overflow-hidden z-10">
-                                {connectors.map((connector) => (
-                                  <Button
-                                    key={connector.id}
-                                    onClick={() => handleConnect(connector)}
-                                    disabled={isPending}
-                                    className="w-full justify-start bg-transparent hover:bg-white/10 border-0 text-white rounded-none h-12"
-                                    variant="ghost"
-                                  >
-                                    <Wallet className="w-4 h-4 mr-3" />
-                                    {connector.name}
-                                    {isPending && " (Connecting...)"}
-                                  </Button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
                         </div>
-                      )}
+                      </div>
                     </CardContent>
                   </Card>
-
-                  {/* Split Creation Form - Only show if wallet is connected and on correct network */}
-                  {isConnected && isOnCelo && (
-                    <div className="border border-white">
-                      <SplitCreationForm
-                        theme={theme}
-                        onSplitCreated={handleSplitCreated}
-                      />
-                    </div>
-                  )}
                 </div>
+              )}
+            </div>
+
+            {/* Message when no splits */}
+            {isConnected && isOnCelo && userSplits.length === 0 && (
+              <div className="text-center py-12">
+                <p
+                  className={`${
+                    theme === "dark" ? "text-white/50" : "text-black/50"
+                  } text-lg`}
+                >
+                  No splits created yet. Create your first split above!
+                </p>
               </div>
             )}
 
-            {activeView === "transactions" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2
-                    className={`${
-                      theme === "dark" ? "text-white" : "text-black"
-                    } text-xl font-bold font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
-                  >
-                    Transaction History
-                  </h2>
-                  <Button
-                    onClick={() => handleViewChange("default")}
-                    variant="outline"
-                    className={`${
-                      theme === "dark"
-                        ? "border-white/20 hover:bg-white/10 text-black"
-                        : "border-black/20 hover:bg-black/10 text-black"
-                    }`}
-                  >
-                    Back to Dashboard
-                  </Button>
-                </div>
-
-                <Card
+            {/* Message when wallet not connected */}
+            {!isConnected && (
+              <div className="text-center py-12">
+                <p
                   className={`${
-                    theme === "dark"
-                      ? "bg-black/50 border-white/10"
-                      : "bg-white/50 border-black/10"
-                  } backdrop-blur-sm`}
+                    theme === "dark" ? "text-white/50" : "text-black/50"
+                  } text-lg`}
                 >
-                  <CardHeader>
-                    <CardTitle
-                      className={`${
-                        theme === "dark" ? "text-white" : "text-black"
-                      } font-[family-name:var(--font-share-tech-mono)]`}
-                    >
-                      Recent Transactions
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="text-center py-8">
-                        <p
-                          className={`text-lg ${
-                            theme === "dark" ? "text-white/50" : "text-black/50"
-                          }`}
-                        >
-                          No transactions yet
-                        </p>
-                        <p
-                          className={`text-sm ${
-                            theme === "dark" ? "text-white/30" : "text-black/30"
-                          } mt-2`}
-                        >
-                          Your transaction history will appear here
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  Connect your wallet to start creating payment splits.
+                </p>
+              </div>
+            )}
+
+            {/* Message when on wrong network */}
+            {isConnected && !isOnSupportedNetwork && (
+              <div className="text-center py-12">
+                <p
+                  className={`${
+                    theme === "dark" ? "text-white/50" : "text-black/50"
+                  } text-lg`}
+                >
+                  Please switch to a supported network (Celo or Base) to create
+                  and manage splits.
+                </p>
               </div>
             )}
           </div>
-
-          {/* Message when no splits */}
-          {isConnected && isOnCelo && userSplits.length === 0 && (
-            <div className="text-center py-12">
-              <p
-                className={`${
-                  theme === "dark" ? "text-white/50" : "text-black/50"
-                } text-lg`}
-              >
-                No splits created yet. Create your first split above!
-              </p>
-            </div>
-          )}
-
-          {/* Message when wallet not connected */}
-          {!isConnected && (
-            <div className="text-center py-12">
-              <p
-                className={`${
-                  theme === "dark" ? "text-white/50" : "text-black/50"
-                } text-lg`}
-              >
-                Connect your wallet to start creating payment splits.
-              </p>
-            </div>
-          )}
-
-          {/* Message when on wrong network */}
-          {isConnected && !isOnCelo && (
-            <div className="text-center py-12">
-              <p
-                className={`${
-                  theme === "dark" ? "text-white/50" : "text-black/50"
-                } text-lg`}
-              >
-                Please switch to Celo network to create and manage
-                splits.
-              </p>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+      <BankDetailsDialog
+        open={showSwapModal}
+        onOpenChange={setShowSwapModal}
+        theme={theme}
+        accountNumber={accountNumber}
+        setAccountNumber={setAccountNumber}
+        selectedBank={selectedBank}
+        setSelectedBank={setSelectedBank}
+        banks={banks}
+        banksLoading={banksLoading}
+        onSend={handleSend}
+        accountName={accountName}
+      />
+    </>
   );
 }
