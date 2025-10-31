@@ -96,7 +96,7 @@ export default function SplitPage() {
 
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const { isConnected, address } = useWallet();
+  const { isConnected, address, isOnSupportedNetwork } = useWallet();
   const { connectors, connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const { chain } = useAccount();
@@ -106,8 +106,6 @@ export default function SplitPage() {
   const isOnBase = chain?.id === base.id;
   const isOnCeloSepolia = chain?.id === celoSepolia.id;
   const isOnBaseSepolia = chain?.id === baseSepolia.id;
-  const isOnSupportedNetwork =
-    isOnCelo || isOnBase || isOnCeloSepolia || isOnBaseSepolia;
   const { fetchSplits } = useSplitFactory();
   const { showError, showSuccess, showInfo } = useToastNotification();
   const {
@@ -232,23 +230,17 @@ export default function SplitPage() {
     }
   }, [isConnected, chain, isOnSupportedNetwork]);
 
+  const { switchToSupportedNetwork } = useWallet();
+
   const handleSwitchNetwork = async () => {
-    if (!isOnSupportedNetwork) {
-      try {
-        // Try Celo first, then Base if Celo fails
-        try {
-          await switchChain({ chainId: celo.id });
-          showSuccess("Successfully switched to Celo network");
-        } catch {
-          await switchChain({ chainId: base.id });
-          showSuccess("Successfully switched to Base network");
-        }
-      } catch (error) {
-        showError(
-          "Failed to switch network. Please switch manually in your wallet."
-        );
-        console.error("Failed to switch to supported network:", error);
-      }
+    try {
+      await switchToSupportedNetwork();
+      showSuccess("Successfully switched to supported network");
+    } catch (error) {
+      showError(
+        "Failed to switch network. Please switch manually in your wallet."
+      );
+      console.error("Failed to switch to supported network:", error);
     }
   };
 
@@ -1697,7 +1689,7 @@ export default function SplitPage() {
                       variant="outline"
                       className={`${
                         theme === "dark"
-                          ? "border-white/20 hover:bg-white/10 text-black"
+                          ? "border-white/20 hover:bg-white/10 text-white"
                           : "border-black/20 hover:bg-black/10 text-black"
                       }`}
                     >
@@ -1749,19 +1741,6 @@ export default function SplitPage() {
                 </div>
               )}
             </div>
-
-            {/* Message when no splits */}
-            {isConnected && isOnCelo && userSplits.length === 0 && (
-              <div className="text-center py-12">
-                <p
-                  className={`${
-                    theme === "dark" ? "text-white/50" : "text-black/50"
-                  } text-lg`}
-                >
-                  No splits created yet. Create your first split above!
-                </p>
-              </div>
-            )}
 
             {/* Message when wallet not connected */}
             {!isConnected && (

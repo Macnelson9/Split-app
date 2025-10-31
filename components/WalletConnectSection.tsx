@@ -19,12 +19,13 @@ export function WalletConnectSection({
   const {
     address,
     isConnected,
+    chain,
     isConnecting,
     isSwitchingChain,
     connectWallet,
     disconnectWallet,
-    switchToBaseSepolia,
-    isOnBaseSepolia,
+    switchToSupportedNetwork,
+    isOnSupportedNetwork,
   } = useWallet();
 
   const { showError, showSuccess } = useToastNotification();
@@ -40,8 +41,8 @@ export function WalletConnectSection({
 
   const handleSwitchNetwork = async () => {
     try {
-      await switchToBaseSepolia();
-      showSuccess("Switched to Base Sepolia!");
+      await switchToSupportedNetwork();
+      showSuccess("Switched to supported network!");
     } catch (error) {
       showError(
         "Failed to switch network",
@@ -137,13 +138,13 @@ export function WalletConnectSection({
                 Network:
               </span>
               <div className="flex items-center gap-2">
-                {isOnBaseSepolia ? (
+                {isOnSupportedNetwork ? (
                   <Badge
                     variant="outline"
                     className="flex items-center gap-1 text-white"
                   >
                     <CheckCircle className="w-3 h-3 text-green-500" />
-                    Base Sepolia
+                    {chain?.name || "Supported Network"}
                   </Badge>
                 ) : (
                   <Badge
@@ -157,7 +158,7 @@ export function WalletConnectSection({
               </div>
             </div>
 
-            {!isOnBaseSepolia && (
+            {!isOnSupportedNetwork && (
               <Button
                 onClick={handleSwitchNetwork}
                 disabled={isSwitchingChain}

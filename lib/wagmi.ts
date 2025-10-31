@@ -31,9 +31,13 @@ export const config = createConfig({
   chains: [celo, base, baseSepolia, celoSepolia],
   connectors: [
     injected(),
-    walletConnect({
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
-    }),
+    ...(process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+      ? [
+          walletConnect({
+            projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
+          }),
+        ]
+      : []),
   ],
   transports: {
     [celo.id]: http(),
