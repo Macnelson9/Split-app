@@ -17,7 +17,10 @@ export default function ClientLayout({
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.classList.toggle("dark", savedTheme === "dark");
-      document.documentElement.classList.toggle("light", savedTheme === "light");
+      document.documentElement.classList.toggle(
+        "light",
+        savedTheme === "light"
+      );
     }
   }, []);
 
@@ -61,7 +64,7 @@ export default function ClientLayout({
         openMenuButtonColor="#fff"
         changeMenuColorOnOpen={true}
         colors={["#B19EEF", "#5227FF"]}
-        logoUrl="/placeholder-logo.png"
+        logoUrl="/Split Celo light.png"
         accentColor="#FCFE52"
         isFixed={true}
         theme={theme}

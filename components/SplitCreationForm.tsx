@@ -19,6 +19,8 @@ import { Address } from "viem";
 
 interface SplitCreationFormProps {
   theme: "dark" | "light";
+  themeColor: string;
+  themeForeground: string;
   onSplitCreated?: (splitAddress: string) => void;
 }
 
@@ -53,10 +55,12 @@ const BASE_TOKENS = [
 
 export function SplitCreationForm({
   theme,
+  themeColor,
+  themeForeground,
   onSplitCreated,
 }: SplitCreationFormProps) {
   const [recipients, setRecipients] = useState<string[]>([""]);
-  const [percentages, setPercentages] = useState<number[]>([10000]);
+  const [percentages, setPercentages] = useState<number[]>([100]);
   const [selectedToken, setSelectedToken] = useState<string>(
     BASE_TOKENS[0].address
   );
@@ -105,13 +109,10 @@ export function SplitCreationForm({
       }
     }
 
-    // Check if percentages sum to 10000 (100%)
+    // Check if percentages sum to 100 (100%)
     const totalPercentage = percentages.reduce((sum, p) => sum + p, 0);
-    if (totalPercentage !== 10000) {
-      showError(
-        "Invalid percentages",
-        "Percentages must sum to 100% (10000 basis points)"
-      );
+    if (totalPercentage !== 100) {
+      showError("Invalid percentages", "Percentages must sum to 100%");
       return false;
     }
 
@@ -130,10 +131,11 @@ export function SplitCreationForm({
     if (!validateForm()) return;
 
     try {
+      const scaledPercentages = percentages.map((p) => p * 100); // Scale to basis points
       const result = await createSplit(
         selectedToken as Address,
         recipients as Address[],
-        percentages
+        scaledPercentages
       );
 
       showSuccess("Split created successfully!", `Split address: ${result}`);
@@ -142,7 +144,7 @@ export function SplitCreationForm({
 
       // Reset form
       setRecipients([""]);
-      setPercentages([10000]);
+      setPercentages([100]);
       setSelectedToken(BASE_TOKENS[0].address);
 
       onSplitCreated?.(result);
@@ -156,7 +158,7 @@ export function SplitCreationForm({
   };
 
   const totalPercentage = percentages.reduce((sum, p) => sum + p, 0);
-  const isValidPercentage = totalPercentage === 10000;
+  const isValidPercentage = totalPercentage === 100;
 
   return (
     <Card
@@ -259,7 +261,7 @@ export function SplitCreationForm({
                     value={percentages[index] || ""}
                     onChange={(e) => updatePercentage(index, e.target.value)}
                     min="0"
-                    max="10000"
+                    max="100"
                     className={`${
                       theme === "dark"
                         ? "bg-black/50 border-white/20 text-white"
@@ -289,7 +291,7 @@ export function SplitCreationForm({
               <span
                 className={theme === "dark" ? "text-white/70" : "text-black/70"}
               >
-                Total: {(totalPercentage / 100).toFixed(2)}%
+                Total: {(totalPercentage / 1).toFixed(2)}%
               </span>
               <span
                 className={
@@ -304,7 +306,11 @@ export function SplitCreationForm({
           <Button
             type="submit"
             disabled={isCreating || isConfirming || !isValidPercentage}
-            className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black"
+            className="w-full"
+            style={{
+              backgroundColor: themeColor,
+              color: themeForeground,
+            }}
           >
             {isCreating ? (
               <>
