@@ -74,6 +74,7 @@ export default function SplitPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [isClient, setIsClient] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [decryptKey, setDecryptKey] = useState(0);
   const [userSplits, setUserSplits] = useState<any[]>([]);
   const [activeView, setActiveView] = useState<
@@ -94,6 +95,8 @@ export default function SplitPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showMobileWalletModal, setShowMobileWalletModal] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -153,6 +156,13 @@ export default function SplitPage() {
       setTheme(savedTheme);
     }
     setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {
@@ -314,6 +324,38 @@ export default function SplitPage() {
     }
   };
 
+  const getViewLabel = (view: string) => {
+    switch (view) {
+      case "createSplit":
+        return "Create Split";
+      case "mySplits":
+        return "My Splits";
+      case "swap":
+        return "Swap";
+      case "transactions":
+        return "Transactions";
+      default:
+        return "Create Split";
+    }
+  };
+
+  const handleSelectChange = (label: string) => {
+    switch (label) {
+      case "Create Split":
+        handleViewChange("createSplit");
+        break;
+      case "My Splits":
+        handleViewChange("mySplits");
+        break;
+      case "Swap":
+        handleViewChange("swap");
+        break;
+      case "Transactions":
+        handleViewChange("transactions");
+        break;
+    }
+  };
+
   const handleConnect = async (connector: any) => {
     try {
       await connect({ connector });
@@ -326,6 +368,8 @@ export default function SplitPage() {
   const handleDisconnect = () => {
     disconnect();
     setShowWalletOptions(false);
+    setShowWalletModal(false);
+    setShowMobileWalletModal(false);
   };
 
   const formatAddress = (addr: string) => {
@@ -1114,14 +1158,14 @@ export default function SplitPage() {
               {theme === "dark" ? (
                 <>
                   <Sun className="w-5 h-5 text-white" />
-                  <span className="text-white text-sm font-medium">
+                  <span className="hidden md:inline text-white text-sm font-medium">
                     Light Mode
                   </span>
                 </>
               ) : (
                 <>
                   <Moon className="w-5 h-5 text-black" />
-                  <span className="text-black text-sm font-medium">
+                  <span className="hidden md:inline text-black text-sm font-medium">
                     Dark Mode
                   </span>
                 </>
@@ -1220,16 +1264,16 @@ export default function SplitPage() {
                 {theme === "dark" ? (
                   <>
                     <Sun className="w-5 h-5 text-white" />
-                    <span className="text-white text-sm font-medium">
+                    {/* <span className="text-white text-sm font-medium">
                       Light Mode
-                    </span>
+                    </span> */}
                   </>
                 ) : (
                   <>
                     <Moon className="w-5 h-5 text-black" />
-                    <span className="text-black text-sm font-medium">
+                    {/* <span className="text-black text-sm font-medium">
                       Dark Mode
-                    </span>
+                    </span> */}
                   </>
                 )}
               </button>
@@ -1243,7 +1287,7 @@ export default function SplitPage() {
               <h1
                 className={`${
                   theme === "dark" ? "text-white" : "text-black"
-                } text-base sm:text-lg md:text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight mb-4 font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
+                } text-3xl sm:text-lg md:text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight mb-4 font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider`}
               >
                 SPLIT DASHBOARD
               </h1>
@@ -1257,82 +1301,133 @@ export default function SplitPage() {
             </div>
 
             {/* Dashboard Buttons */}
-            <div className="grid grid-cols-1 sm:flex sm:flex-row sm:justify-center lg:grid lg:grid-cols-4 gap-6 mb-12">
-              <Button
-                onClick={() => handleViewChange("createSplit")}
-                variant={activeView === "createSplit" ? "default" : "outline"}
-                className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                  activeView === "createSplit" ? "text-black" : "text-white"
-                }`}
-                style={{
-                  backgroundColor:
-                    activeView === "createSplit" ? themeColor : undefined,
-                  borderColor:
-                    activeView === "createSplit" ? themeColor : undefined,
-                }}
-              >
-                <Plus className="w-8 h-8" />
-                <span className="hidden sm:block text-lg font-semibold">
-                  Create Split
-                </span>
-              </Button>
+            {isMobile ? (
+              <div className="flex items-center gap-4 mb-12">
+                <Select
+                  value={getViewLabel(activeView)}
+                  onValueChange={handleSelectChange}
+                >
+                  <SelectTrigger
+                    className={`flex-1 ${
+                      theme === "dark"
+                        ? "bg-black/50 border-white/20 text-white"
+                        : "bg-white/50 border-black/20 text-black"
+                    }`}
+                  >
+                    <SelectValue placeholder="Select an option" />
+                  </SelectTrigger>
+                  <SelectContent
+                    className={
+                      theme === "dark"
+                        ? "bg-black/90 border-white/20 text-white"
+                        : "bg-white border-black/20 text-black"
+                    }
+                  >
+                    <SelectItem value="Create Split">Create Split</SelectItem>
+                    <SelectItem value="My Splits">My Splits</SelectItem>
+                    <SelectItem value="Swap">Swap</SelectItem>
+                    <SelectItem value="Transactions">Transactions</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() =>
+                    isConnected
+                      ? setShowWalletModal(true)
+                      : setShowMobileWalletModal(true)
+                  }
+                  variant="outline"
+                  className={`${
+                    theme === "dark"
+                      ? "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                      : "bg-black/10 hover:bg-black/20 border-black/20 text-black"
+                  } flex items-center gap-2`}
+                >
+                  <Wallet className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {isConnected ? "Connected" : "Connect"}
+                  </span>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:flex sm:flex-row sm:justify-center lg:grid lg:grid-cols-4 gap-6 mb-12">
+                <Button
+                  onClick={() => handleViewChange("createSplit")}
+                  variant={activeView === "createSplit" ? "default" : "outline"}
+                  className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
+                    activeView === "createSplit" ? "text-black" : "text-white"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      activeView === "createSplit" ? themeColor : undefined,
+                    borderColor:
+                      activeView === "createSplit" ? themeColor : undefined,
+                  }}
+                >
+                  <Plus className="w-8 h-8" />
+                  <span className="hidden sm:block text-lg font-semibold">
+                    Create Split
+                  </span>
+                </Button>
 
-              <Button
-                onClick={() => handleViewChange("mySplits")}
-                variant={activeView === "mySplits" ? "default" : "outline"}
-                className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                  activeView === "mySplits" ? "text-black" : "text-white"
-                }`}
-                style={{
-                  backgroundColor:
-                    activeView === "mySplits" ? themeColor : undefined,
-                  borderColor:
-                    activeView === "mySplits" ? themeColor : undefined,
-                }}
-              >
-                <FileText className="w-8 h-8" />
-                <span className="hidden sm:block text-lg font-semibold">
-                  My Splits
-                </span>
-              </Button>
+                <Button
+                  onClick={() => handleViewChange("mySplits")}
+                  variant={activeView === "mySplits" ? "default" : "outline"}
+                  className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
+                    activeView === "mySplits" ? "text-black" : "text-white"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      activeView === "mySplits" ? themeColor : undefined,
+                    borderColor:
+                      activeView === "mySplits" ? themeColor : undefined,
+                  }}
+                >
+                  <FileText className="w-8 h-8" />
+                  <span className="hidden sm:block text-lg font-semibold">
+                    My Splits
+                  </span>
+                </Button>
 
-              <Button
-                onClick={() => handleViewChange("swap")}
-                variant={activeView === "swap" ? "default" : "outline"}
-                className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                  activeView === "swap" ? "text-black" : "text-white"
-                }`}
-                style={{
-                  backgroundColor:
-                    activeView === "swap" ? themeColor : undefined,
-                  borderColor: activeView === "swap" ? themeColor : undefined,
-                }}
-              >
-                <ArrowRightLeft className="w-8 h-8" />
-                <span className="hidden sm:block text-lg font-semibold">
-                  Swap
-                </span>
-              </Button>
+                <Button
+                  onClick={() => handleViewChange("swap")}
+                  variant={activeView === "swap" ? "default" : "outline"}
+                  className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
+                    activeView === "swap" ? "text-black" : "text-white"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      activeView === "swap" ? themeColor : undefined,
+                    borderColor: activeView === "swap" ? themeColor : undefined,
+                  }}
+                >
+                  <ArrowRightLeft className="w-8 h-8" />
+                  <span className="hidden sm:block text-lg font-semibold">
+                    Swap
+                  </span>
+                </Button>
 
-              <Button
-                onClick={() => handleViewChange("transactions")}
-                variant={activeView === "transactions" ? "default" : "outline"}
-                className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                  activeView === "transactions" ? "text-black" : "text-white"
-                }`}
-                style={{
-                  backgroundColor:
-                    activeView === "transactions" ? themeColor : undefined,
-                  borderColor:
-                    activeView === "transactions" ? themeColor : undefined,
-                }}
-              >
-                <History className="w-8 h-8" />
-                <span className="hidden sm:block text-lg font-semibold">
-                  Transactions
-                </span>
-              </Button>
-            </div>
+                <Button
+                  onClick={() => handleViewChange("transactions")}
+                  variant={
+                    activeView === "transactions" ? "default" : "outline"
+                  }
+                  className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
+                    activeView === "transactions" ? "text-black" : "text-white"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      activeView === "transactions" ? themeColor : undefined,
+                    borderColor:
+                      activeView === "transactions" ? themeColor : undefined,
+                  }}
+                >
+                  <History className="w-8 h-8" />
+                  <span className="hidden sm:block text-lg font-semibold">
+                    Transactions
+                  </span>
+                </Button>
+              </div>
+            )}
 
             {/* Content Area - Show different views based on selected action */}
             <div ref={contentRef} className="space-y-8">
@@ -1340,106 +1435,111 @@ export default function SplitPage() {
                 <>
                   {/* Default view - show wallet connection and recent splits */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Wallet Connection Section */}
-                    <Card className="border border-white/20 bg-black/50 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-white font-[family-name:var(--font-share-tech-mono)]">
-                          <Wallet className="w-5 h-5" />
-                          {isConnected ? "Wallet Connected" : "Connect Wallet"}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {isConnected ? (
-                          <div className="space-y-4">
-                            <div className="p-4 bg-white/10 rounded-lg">
-                              <p className="text-sm text-white/70 mb-2">
-                                Connected Address:
-                              </p>
-                              <p className="font-mono text-white text-sm">
-                                {formatAddress(address!)}
-                              </p>
-                              <p className="text-xs text-white/50 mt-1">
-                                Network: {chain?.name || "Unknown"}
-                              </p>
-                            </div>
+                    {/* Wallet Connection Section - Hidden on mobile */}
+                    {!isMobile && (
+                      <Card className="border border-white/20 bg-black/50 backdrop-blur-sm">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-white font-[family-name:var(--font-share-tech-mono)]">
+                            <Wallet className="w-5 h-5" />
+                            {isConnected
+                              ? "Wallet Connected"
+                              : "Connect Wallet"}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {isConnected ? (
+                            <div className="space-y-4">
+                              <div className="p-4 bg-white/10 rounded-lg">
+                                <p className="text-sm text-white/70 mb-2">
+                                  Connected Address:
+                                </p>
+                                <p className="font-mono text-white text-sm">
+                                  {formatAddress(address!)}
+                                </p>
+                                <p className="text-xs text-white/50 mt-1">
+                                  Network: {chain?.name || "Unknown"}
+                                </p>
+                              </div>
 
-                            {!isOnSupportedNetwork && (
-                              <Button
-                                onClick={handleSwitchNetwork}
-                                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                              >
-                                Switch to Supported Network
-                              </Button>
-                            )}
-
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={handleDisconnect}
-                                variant="outline"
-                                className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-500"
-                              >
-                                Disconnect
-                              </Button>
-                              <Button
-                                onClick={() =>
-                                  window.open(
-                                    `https://celoscan.io/address/${address}`,
-                                    "_blank"
-                                  )
-                                }
-                                variant="outline"
-                                className="border-white/20 hover:bg-white/10"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            <p className="text-sm text-white/70">
-                              Choose a wallet to connect to the application
-                            </p>
-
-                            <div className="relative">
-                              <Button
-                                onClick={() =>
-                                  setShowWalletOptions(!showWalletOptions)
-                                }
-                                className="w-full network-accent flex items-center justify-between"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Wallet className="w-4 h-4" />
-                                  <span>Select Wallet</span>
-                                </div>
-                                <ChevronDown
-                                  className={`w-4 h-4 transition-transform ${
-                                    showWalletOptions ? "rotate-180" : ""
-                                  }`}
-                                />
-                              </Button>
-
-                              {showWalletOptions && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 border border-white/20 rounded-lg overflow-hidden z-10">
-                                  {connectors.map((connector) => (
-                                    <Button
-                                      key={connector.id}
-                                      onClick={() => handleConnect(connector)}
-                                      disabled={isPending}
-                                      className="w-full justify-start bg-transparent hover:bg-white/10 border-0 text-white rounded-none h-12"
-                                      variant="ghost"
-                                    >
-                                      <Wallet className="w-4 h-4 mr-3" />
-                                      {connector.name}
-                                      {isPending && " (Connecting...)"}
-                                    </Button>
-                                  ))}
-                                </div>
+                              {!isOnSupportedNetwork && (
+                                <Button
+                                  onClick={handleSwitchNetwork}
+                                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                                >
+                                  Switch to Supported Network
+                                </Button>
                               )}
+
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={handleDisconnect}
+                                  variant="outline"
+                                  className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-500"
+                                >
+                                  Disconnect
+                                </Button>
+                                <Button
+                                  onClick={() =>
+                                    window.open(
+                                      `https://celoscan.io/address/${address}`,
+                                      "_blank"
+                                    )
+                                  }
+                                  variant="outline"
+                                  className="border-white/20 hover:bg-white/10"
+                                  disabled={!address}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                          ) : (
+                            <div className="space-y-3">
+                              <p className="text-sm text-white/70">
+                                Choose a wallet to connect to the application
+                              </p>
+
+                              <div className="relative">
+                                <Button
+                                  onClick={() =>
+                                    setShowWalletOptions(!showWalletOptions)
+                                  }
+                                  className="w-full network-accent flex items-center justify-between"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Wallet className="w-4 h-4" />
+                                    <span>Select Wallet</span>
+                                  </div>
+                                  <ChevronDown
+                                    className={`w-4 h-4 transition-transform ${
+                                      showWalletOptions ? "rotate-180" : ""
+                                    }`}
+                                  />
+                                </Button>
+
+                                {showWalletOptions && (
+                                  <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 border border-white/20 rounded-lg overflow-hidden z-10">
+                                    {connectors.map((connector) => (
+                                      <Button
+                                        key={connector.id}
+                                        onClick={() => handleConnect(connector)}
+                                        disabled={isPending}
+                                        className="w-full justify-start bg-transparent hover:bg-white/10 border-0 text-white rounded-none h-12"
+                                        variant="ghost"
+                                      >
+                                        <Wallet className="w-4 h-4 mr-3" />
+                                        {connector.name}
+                                        {isPending && " (Connecting...)"}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Split Creation Form - Only show if wallet is connected and on correct network */}
                     {isConnected && isOnSupportedNetwork && (
@@ -1858,6 +1958,130 @@ export default function SplitPage() {
         onSend={handleSend}
         accountName={accountName}
       />
+
+      {/* Mobile Wallet Connect Modal */}
+      <Dialog
+        open={showMobileWalletModal}
+        onOpenChange={setShowMobileWalletModal}
+      >
+        <DialogContent
+          className={
+            theme === "dark"
+              ? "bg-black/95 border-white/20 text-white"
+              : "bg-white border-black/20 text-black"
+          }
+        >
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">
+              Connect Wallet
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className={`text-sm ${theme === "dark" ? "text-white/70" : "text-black/70"}`}>
+              Choose a wallet to connect to the application
+            </p>
+            <div className="space-y-2">
+              {connectors.map((connector) => (
+                <Button
+                  key={connector.id}
+                  onClick={() => {
+                    handleConnect(connector);
+                    setShowMobileWalletModal(false);
+                  }}
+                  disabled={isPending}
+                  className={`w-full justify-start bg-transparent hover:${
+                    theme === "dark" ? "bg-white/10" : "bg-black/10"
+                  } border-0 ${
+                    theme === "dark" ? "text-white" : "text-black"
+                  } rounded-none h-12`}
+                  variant="ghost"
+                >
+                  <Wallet className="w-4 h-4 mr-3" />
+                  {connector.name}
+                  {isPending && " (Connecting...)"}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Wallet Modal */}
+      <Dialog open={showWalletModal} onOpenChange={setShowWalletModal}>
+        <DialogContent
+          className={
+            theme === "dark"
+              ? "bg-black/95 border-white/20 text-white"
+              : "bg-white border-black/20 text-black"
+          }
+        >
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">
+              Wallet Connected
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div
+              className={`p-4 ${
+                theme === "dark" ? "bg-white/10" : "bg-black/10"
+              } rounded-lg`}
+            >
+              <p
+                className={`text-sm ${
+                  theme === "dark" ? "text-white/70" : "text-black/70"
+                } mb-2`}
+              >
+                Connected Address:
+              </p>
+              <p
+                className={`font-mono text-sm ${
+                  theme === "dark" ? "text-white" : "text-black"
+                }`}
+              >
+                {address ? formatAddress(address) : "N/A"}
+              </p>
+              <p
+                className={`text-xs ${
+                  theme === "dark" ? "text-white/50" : "text-black/50"
+                } mt-1`}
+              >
+                Network: {chain?.name || "Unknown"}
+              </p>
+            </div>
+
+            {!isOnSupportedNetwork && (
+              <Button
+                onClick={handleSwitchNetwork}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                Switch to Supported Network
+              </Button>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                onClick={handleDisconnect}
+                variant="outline"
+                className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-500"
+              >
+                Disconnect
+              </Button>
+              <Button
+                onClick={() =>
+                  window.open(
+                    `https://celoscan.io/address/${address}`,
+                    "_blank"
+                  )
+                }
+                variant="outline"
+                className="border-white/20 hover:bg-white/10"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Modal */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>

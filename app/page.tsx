@@ -47,8 +47,26 @@ export default function HomePage() {
         theme === "dark" ? "bg-black" : "bg-white"
       }`}
     >
+      {/* Logo top-left (responsive) */}
+      <div className="absolute top-4 left-4 z-50 lg:left-11">
+        <Link href="/" className="flex items-center gap-2">
+          <Image
+            src={
+              theme === "dark"
+                ? "/Split Celo light - Edited.png"
+                : "/Split Celo.png"
+            }
+            alt="Split Logo"
+            width={140}
+            height={36}
+            className="h-20 w-auto"
+            priority
+          />
+        </Link>
+      </div>
+
       {/* Theme switcher in top right corner */}
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-8  right-11 z-50">
         <button
           onClick={toggleTheme}
           className={`flex items-center gap-2 ${
@@ -62,12 +80,16 @@ export default function HomePage() {
           {theme === "dark" ? (
             <>
               <Sun className="w-5 h-5 text-white" />
-              <span className="text-white text-sm font-medium">Light Mode</span>
+              <span className="hidden md:inline text-white text-sm font-medium">
+                Light Mode
+              </span>
             </>
           ) : (
             <>
               <Moon className="w-5 h-5 text-black" />
-              <span className="text-black text-sm font-medium">Dark Mode</span>
+              <span className="hidden md:inline text-black text-sm font-medium">
+                Dark Mode
+              </span>
             </>
           )}
         </button>
@@ -1204,7 +1226,7 @@ export default function HomePage() {
         <h1
           className={`${
             theme === "dark" ? "text-white" : "text-black"
-          } text-base sm:text-lg md:text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight mb-4 sm:mb-6 text-balance font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider text-center sm:text-left`}
+          } text-3xl sm:text-lg md:text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight mb-4 sm:mb-6 text-balance font-[family-name:var(--font-share-tech-mono)] uppercase tracking-wider text-center sm:text-left`}
         >
           <DecryptedText
             key={decryptKey}
@@ -1223,14 +1245,20 @@ export default function HomePage() {
         <p
           className={`${
             theme === "dark" ? "text-white/70" : "text-black/70"
-          } text-base sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 max-w-2xl text-pretty font-[family-name:var(--font-rajdhani)] font-medium leading-relaxed text-center sm:text-left`}
+          } text-lg sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 max-w-2xl text-pretty font-[family-name:var(--font-rajdhani)] font-medium leading-relaxed text-center sm:text-left`}
         >
           Send once. Split instantly.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Link href="/split">
-            <Button className="group relative text-black px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base md:text-base lg:text-lg font-semibold flex items-center gap-2 backdrop-blur-sm border shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 font-[family-name:var(--font-rajdhani)] network-accent">
+            <Button
+              className={`group relative px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base md:text-base lg:text-lg font-semibold flex items-center gap-2 backdrop-blur-sm border shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 font-[family-name:var(--font-rajdhani)] bg-transparent ${
+                theme === "dark"
+                  ? "text-white hover:text-black"
+                  : "text-black hover:text-black"
+              }`}
+            >
               Launch App
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 group-hover:-rotate-12 transition-transform duration-300" />
               <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

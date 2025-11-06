@@ -1359,14 +1359,14 @@ export default function ContactPage() {
               {theme === "dark" ? (
                 <>
                   <Sun className="w-5 h-5 text-white" />
-                  <span className="text-white text-sm font-medium">
+                  <span className="hidden md:inline text-white text-sm font-medium">
                     Light Mode
                   </span>
                 </>
               ) : (
                 <>
                   <Moon className="w-5 h-5 text-black" />
-                  <span className="text-black text-sm font-medium">
+                  <span className="hidden md:inline text-black text-sm font-medium">
                     Dark Mode
                   </span>
                 </>

@@ -1,5 +1,6 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+import { Sun, Moon } from "lucide-react";
 
 export interface StaggeredMenuItem {
   label: string;
@@ -600,12 +601,19 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
             <div className="mt-4 flex items-center justify-center">
               <button
                 onClick={onThemeToggle}
-                className="px-4 py-2 rounded-lg font-medium transition-colors duration-200 bg-white text-black hover:bg-gray-200"
+                className="px-4 py-2 rounded-lg font-medium transition-colors duration-200 bg-white text-black hover:bg-gray-200 flex items-center gap-2"
                 aria-label={`Switch to ${
                   theme === "dark" ? "light" : "dark"
                 } mode`}
               >
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                {theme === "dark" ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+                <span className="hidden md:inline">
+                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                </span>
               </button>
             </div>
           </div>
