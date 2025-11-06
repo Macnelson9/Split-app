@@ -45,7 +45,7 @@ export const config = createConfig({
     [baseSepolia.id]: http(),
     [celoSepolia.id]: http(),
   },
-  ssr: true,
+  ssr: false,
 });
 
 declare module "wagmi" {
