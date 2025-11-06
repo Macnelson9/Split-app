@@ -1663,23 +1663,25 @@ export default function SplitPage() {
                           >
                             To Token
                           </label>
-                          <div className="8189805590flex items-center gap-2 p-3 border rounded-lg bg-gray-100 text-white dark:bg-gray-800">
-                            {/* <span className="text-lg">{nairaToken.icon}</span> */}
+                          <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-100 dark:bg-gray-800">
+                            <span className="text-lg">{nairaToken.icon}</span>
                             <span
                               className={
-                                theme === "dark" ? "text-white" : "text-white"
+                                theme === "dark" ? "text-white" : "text-black"
                               }
                             >
                               {nairaToken.symbol}
                             </span>
                             <span
-                              className={`${
-                                theme === "dark" ? "text-white" : "text-white"
-                              } ml-2`}
+                              className={`text-sm ${
+                                theme === "dark"
+                                  ? "text-white/70"
+                                  : "text-black/70"
+                              }`}
                             >
-                              - {nairaToken.name}
+                              {nairaToken.name}
                             </span>
-                            {/* <span
+                            <span
                               className={`text-sm ${
                                 theme === "dark"
                                   ? "text-white/50"
@@ -1687,7 +1689,7 @@ export default function SplitPage() {
                               } ml-auto`}
                             >
                               {nairaToken.price}
-                            </span> */}
+                            </span>
                           </div>
                         </div>
                         {rateLoading && (
@@ -1738,9 +1740,6 @@ export default function SplitPage() {
                         onClick={handleSwap}
                         className="w-full network-accent"
                         disabled={!swapAmount || parseFloat(swapAmount) <= 0}
-                        style={{
-                          backgroundColor: themeColor,
-                        }}
                       >
                         Swap to Naira
                       </Button>
