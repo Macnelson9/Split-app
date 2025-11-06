@@ -179,7 +179,7 @@ export default function SplitPage() {
         }))
       );
     } catch (error) {
-      console.error("Failed to load user splits:", error);
+      // console.error("Failed to load user splits:", error);
       // showError("Failed to load user splits", "Please try again later");
     }
   }, [address, isOnSupportedNetwork]);
@@ -222,14 +222,14 @@ export default function SplitPage() {
         "https://spliting-rhq3.onrender.com/payment/institutions/NGN"
       );
       const data = await response.json();
-      console.log("Banks API response:", data); // Debug log
+      // console.log("Banks API response:", data); // Debug log
       if (data.status === "success") {
         setBanks(data.data);
       } else {
         throw new Error(data.message);
       }
     } catch (error) {
-      console.error("Failed to fetch banks:", error);
+      // console.error("Failed to fetch banks:", error);
       showError("Failed to fetch banks");
     } finally {
       setBanksLoading(false);
@@ -263,7 +263,7 @@ export default function SplitPage() {
       showError(
         "Failed to switch network. Please switch manually in your wallet."
       );
-      console.error("Failed to switch to supported network:", error);
+      // console.error("Failed to switch to supported network:", error);
     }
   };
 
@@ -416,19 +416,19 @@ export default function SplitPage() {
           `https://spliting-rhq3.onrender.com/payment/orders/${orderId}`
         );
         const data = await response.json();
-        console.log("🔍 Settlement API Response:", data);
+        // console.log("🔍 Settlement API Response:", data);
         if (data.status === "success") {
           const settlementStatus = data.data?.status;
-          console.log("🔍 Order data:", data.data);
-          console.log("🔍 Amount paid:", data.data?.amountPaid);
-          console.log("🔍 TX hash:", data.data?.txHash);
+          // console.log("🔍 Order data:", data.data);
+          // console.log("🔍 Amount paid:", data.data?.amountPaid);
+          // console.log("🔍 TX hash:", data.data?.txHash);
           setPaymentStatus(settlementStatus);
 
-          console.log(`🔄 Payment status update: ${settlementStatus}`);
+          // console.log(`🔄 Payment status update: ${settlementStatus}`);
 
           if (settlementStatus === "settled") {
             // Payment settled, transaction is complete
-            console.log("🎉 Payment settlement completed successfully!");
+            // console.log("🎉 Payment settlement completed successfully!");
             showSuccess("Payment completed successfully!");
             setShowSuccessModal(true);
             setPaymentOrderId(null);
@@ -436,7 +436,7 @@ export default function SplitPage() {
             setPaymentStatus(null);
             return; // Stop monitoring
           } else if (settlementStatus === "failed") {
-            console.log("❌ Payment settlement failed");
+            // console.log("❌ Payment settlement failed");
             showError("Payment settlement failed");
             setPaymentOrderId(null);
             setReceiveAddress(null);
@@ -482,9 +482,9 @@ export default function SplitPage() {
   // });
 
   const transferTokensToReceiveAddress = async (receiveAddr: string) => {
-    console.log("🔄 transferTokensToReceiveAddress called");
-    console.log("🔍 receiveAddress:", receiveAddr);
-    console.log("🔍 address:", address);
+    // console.log("🔄 transferTokensToReceiveAddress called");
+    // console.log("🔍 receiveAddress:", receiveAddr);
+    // console.log("🔍 address:", address);
 
     if (!receiveAddr || !address) {
       console.log("❌ Missing receiveAddress or address");
@@ -506,16 +506,16 @@ export default function SplitPage() {
     }
 
     try {
-      console.log("🔄 Starting token transfer process");
+      // console.log("🔄 Starting token transfer process");
       // Handle ERC20 token transfer only (no native tokens)
       const networkTokens = TOKEN_ADDRESSES[network];
       const tokenAddress = networkTokens[fromToken.symbol];
 
-      console.log("🔍 Token lookup:", {
-        network,
-        symbol: fromToken.symbol,
-        tokenAddress,
-      });
+      // console.log("🔍 Token lookup:", {
+      //   network,
+      //   symbol: fromToken.symbol,
+      //   tokenAddress,
+      // });
 
       if (!tokenAddress) {
         throw new Error(
@@ -530,17 +530,17 @@ export default function SplitPage() {
         Math.floor(parseFloat(swapAmount) * 10 ** decimals)
       );
 
-      console.log(
-        `💰 Transferring ${amountInWei} ${fromToken.symbol} (${tokenAddress}) to ${receiveAddr}`
-      );
+      // console.log(
+      //   `💰 Transferring ${amountInWei} ${fromToken.symbol} (${tokenAddress}) to ${receiveAddr}`
+      // );
 
-      console.log("🔄 About to call writeContractAsync...");
-      console.log("🔍 Contract call parameters:", {
-        address: tokenAddress,
-        functionName: "transfer",
-        args: [receiveAddr, amountInWei],
-        abi: ERC20_ABI,
-      });
+      // console.log("🔄 About to call writeContractAsync...");
+      // console.log("🔍 Contract call parameters:", {
+      //   address: tokenAddress,
+      //   functionName: "transfer",
+      //   args: [receiveAddr, amountInWei],
+      //   abi: ERC20_ABI,
+      // });
 
       showInfo("Please confirm the token transfer in your wallet...");
 
@@ -551,7 +551,7 @@ export default function SplitPage() {
         args: [receiveAddr as `0x${string}`, amountInWei],
       });
 
-      console.log("✅ ERC20 Transfer transaction hash:", txHash);
+      // console.log("✅ ERC20 Transfer transaction hash:", txHash);
       showSuccess(`Tokens transferred successfully! TX: ${txHash}`);
 
       // Optional: Wait for transaction confirmation
@@ -559,7 +559,7 @@ export default function SplitPage() {
 
       return txHash;
     } catch (error) {
-      console.error("❌ Error in transferTokensToReceiveAddress:", error);
+      // console.error("❌ Error in transferTokensToReceiveAddress:", error);
       showError(
         error instanceof Error ? error.message : "Token transfer failed"
       );
@@ -595,7 +595,7 @@ export default function SplitPage() {
     }
     setIsProcessingPayment(true);
     try {
-      console.log("📝 Step 1: Creating payment order...");
+      // console.log("📝 Step 1: Creating payment order...");
       // Step 1: Create payment order
       showInfo("Creating payment order...");
 
@@ -622,31 +622,31 @@ export default function SplitPage() {
         }
       );
 
-      console.log("🔄 About to parse response.json()...");
+      // console.log("🔄 About to parse response.json()...");
       const data = await response.json();
-      console.log("📨 Payment API Response:", data);
-      console.log("🔄 About to check if data.order.status === 'success'...");
-      console.log("🔍 data.order.status:", data.order?.status);
+      // console.log("📨 Payment API Response:", data);
+      // console.log("🔄 About to check if data.order.status === 'success'...");
+      // console.log("🔍 data.order.status:", data.order?.status);
       if (data.order?.status === "success") {
         const order = data.order;
         setPaymentOrderId(order.data.id);
         setReceiveAddress(order.data.receiveAddress);
         setPaymentStatus("pending");
-        console.log("✅ Payment order created:", {
-          orderId: order.data.id,
-          receiveAddress: order.data.receiveAddress,
-        });
+        // console.log("✅ Payment order created:", {
+        //   orderId: order.data.id,
+        //   receiveAddress: order.data.receiveAddress,
+        // });
         showSuccess("Payment order initiated successfully");
 
         // Step 2: Transfer tokens to receiveAddress
-        console.log("💸 Step 2: Initiating token transfer...");
+        // console.log("💸 Step 2: Initiating token transfer...");
         showInfo("Please approve the token transfer in your wallet...");
-        console.log("🔄 About to call transferTokensToReceiveAddress...");
+        // console.log("🔄 About to call transferTokensToReceiveAddress...");
         await transferTokensToReceiveAddress(order.data.receiveAddress);
-        console.log("✅ transferTokensToReceiveAddress completed");
+        // console.log("✅ transferTokensToReceiveAddress completed");
 
         // Step 3: Start monitoring payment settlement
-        console.log("👀 Step 3: Starting payment settlement monitoring...");
+        // console.log("👀 Step 3: Starting payment settlement monitoring...");
         showInfo("Monitoring payment settlement...");
         monitorPaymentSettlement(order.data.id);
 
