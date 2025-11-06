@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { gsap } from "gsap";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,28 @@ export default function SplitPage() {
   const isOnBase = chain?.id === base.id;
   const isOnCeloSepolia = chain?.id === celoSepolia.id;
   const isOnBaseSepolia = chain?.id === baseSepolia.id;
+
+  // Determine theme color based on network
+  const isOnBaseNetwork = isOnBase || isOnBaseSepolia;
+  const isOnCeloNetwork = isOnCelo || isOnCeloSepolia;
+  const themeColor = isOnBaseNetwork ? "#0040CC" : "#FCFE52"; // Blue for Base, Yellow for Celo
+  const themeColorHover = isOnBaseNetwork ? "#0033AA" : "#E6E84A"; // Darker blue for Base, lighter yellow for Celo
+  // Also expose these as global CSS variables so other parts of the app can use them
+  useEffect(() => {
+    try {
+      document.documentElement.style.setProperty("--network-color", themeColor);
+      document.documentElement.style.setProperty(
+        "--network-color-hover",
+        themeColorHover
+      );
+      document.documentElement.style.setProperty(
+        "--network-foreground",
+        isOnBaseNetwork ? "#ffffff" : "#000000"
+      );
+    } catch (e) {
+      // ignore in environments without document
+    }
+  }, [themeColor, themeColorHover, isOnBaseNetwork]);
   const { fetchSplits } = useSplitFactory();
   const { showError, showSuccess, showInfo } = useToastNotification();
   const {
@@ -145,18 +168,18 @@ export default function SplitPage() {
       return;
     }
     try {
-      // const splits = await fetchSplits();
+      const splits = await fetchSplits();
       // For now, we'll just store the addresses. In a real app, you'd fetch more details
       setUserSplits([]);
-      // setUserSplits(
-      //   splits.map((splitAddress: string) => ({
-      //     address: splitAddress,
-      //     token: "0x0000000000000000000000000000000000000000", // Default to ETH
-      //     createdAt: Date.now() / 1000, // Placeholder timestamp
-      //   }))
-      // );
+      setUserSplits(
+        splits.map((splitAddress: string) => ({
+          address: splitAddress,
+          token: "0x0000000000000000000000000000000000000000", // Default to ETH
+          createdAt: Date.now() / 1000, // Placeholder timestamp
+        }))
+      );
     } catch (error) {
-      // console.error("Failed to load user splits:", error);
+      console.error("Failed to load user splits:", error);
       // showError("Failed to load user splits", "Please try again later");
     }
   }, [address, isOnSupportedNetwork]);
@@ -649,7 +672,34 @@ export default function SplitPage() {
         className={`min-h-screen relative overflow-hidden ${
           theme === "dark" ? "bg-black" : "bg-white"
         }`}
+        // expose CSS variables for network-based accent colors
+        style={
+          {
+            ["--network-color" as any]: themeColor,
+            ["--network-color-hover" as any]: themeColorHover,
+            ["--network-foreground" as any]: isOnBaseNetwork
+              ? "#ffffff"
+              : "#000000",
+          } as React.CSSProperties
+        }
       >
+        {/* Scoped styles that use the network color variables */}
+        <style jsx>{`
+          .network-accent {
+            background-color: var(--network-color) !important;
+            color: var(--network-foreground) !important;
+          }
+          .network-accent:hover {
+            background-color: var(--network-color-hover) !important;
+          }
+          .network-accent-border {
+            border-color: color-mix(
+              in srgb,
+              var(--network-color) 16%,
+              black
+            ) !important;
+          }
+        `}</style>
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#FCFE52]"></div>
@@ -1035,13 +1085,18 @@ export default function SplitPage() {
 
         <header className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 lg:px-12">
           <div className="flex items-center space-x-2 pl-3 sm:pl-6 lg:pl-12">
-            <h1
-              className={`${
-                theme === "dark" ? "text-white" : "text-black"
-              } text-2xl sm:text-3xl font-bold font-[family-name:var(--font-share-tech-mono)] tracking-wider`}
-            >
-              SPLIT
-            </h1>
+            <Image
+              src={
+                theme === "dark"
+                  ? "/Split Celo light - Edited.png"
+                  : "/Split Celo.png"
+              }
+              alt="Split Logo"
+              width={140}
+              height={36}
+              className="h-20 w-auto"
+              priority
+            />
           </div>
 
           {/* Right side: Theme switcher and back to home button */}
@@ -1078,9 +1133,9 @@ export default function SplitPage() {
                 variant="outline"
                 className={`${
                   theme === "dark"
-                    ? "border-white/20 hover:bg-white/10 text-white"
-                    : "border-black/20 hover:bg-black/10 text-black"
-                } flex items-center gap-2`}
+                    ? "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                    : "bg-black/10 hover:bg-black/20 border-black/20 text-black"
+                } flex items-center gap-2 backdrop-blur-sm`}
               >
                 <Home className="w-4 h-4" />
                 <span className="hidden sm:inline">Home</span>
@@ -1207,10 +1262,14 @@ export default function SplitPage() {
                 onClick={() => handleViewChange("createSplit")}
                 variant={activeView === "createSplit" ? "default" : "outline"}
                 className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                  activeView === "createSplit"
-                    ? "bg-[#FCFE52] text-black border-[#FCFE52]"
-                    : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
+                  activeView === "createSplit" ? "text-black" : "text-white"
                 }`}
+                style={{
+                  backgroundColor:
+                    activeView === "createSplit" ? themeColor : undefined,
+                  borderColor:
+                    activeView === "createSplit" ? themeColor : undefined,
+                }}
               >
                 <Plus className="w-8 h-8" />
                 <span className="hidden sm:block text-lg font-semibold">
@@ -1222,10 +1281,14 @@ export default function SplitPage() {
                 onClick={() => handleViewChange("mySplits")}
                 variant={activeView === "mySplits" ? "default" : "outline"}
                 className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                  activeView === "mySplits"
-                    ? "bg-[#FCFE52] text-black border-[#FCFE52]"
-                    : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
+                  activeView === "mySplits" ? "text-black" : "text-white"
                 }`}
+                style={{
+                  backgroundColor:
+                    activeView === "mySplits" ? themeColor : undefined,
+                  borderColor:
+                    activeView === "mySplits" ? themeColor : undefined,
+                }}
               >
                 <FileText className="w-8 h-8" />
                 <span className="hidden sm:block text-lg font-semibold">
@@ -1237,10 +1300,13 @@ export default function SplitPage() {
                 onClick={() => handleViewChange("swap")}
                 variant={activeView === "swap" ? "default" : "outline"}
                 className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                  activeView === "swap"
-                    ? "bg-[#FCFE52] text-black border-[#FCFE52]"
-                    : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
+                  activeView === "swap" ? "text-black" : "text-white"
                 }`}
+                style={{
+                  backgroundColor:
+                    activeView === "swap" ? themeColor : undefined,
+                  borderColor: activeView === "swap" ? themeColor : undefined,
+                }}
               >
                 <ArrowRightLeft className="w-8 h-8" />
                 <span className="hidden sm:block text-lg font-semibold">
@@ -1252,10 +1318,14 @@ export default function SplitPage() {
                 onClick={() => handleViewChange("transactions")}
                 variant={activeView === "transactions" ? "default" : "outline"}
                 className={`h-32 flex flex-col sm:flex-row items-center justify-center gap-3 ${
-                  activeView === "transactions"
-                    ? "bg-[#FCFE52] text-black border-[#FCFE52]"
-                    : "bg-[#FCFE52] hover:bg-[#E6E84A] text-white border-[#FCFE52]"
+                  activeView === "transactions" ? "text-black" : "text-white"
                 }`}
+                style={{
+                  backgroundColor:
+                    activeView === "transactions" ? themeColor : undefined,
+                  borderColor:
+                    activeView === "transactions" ? themeColor : undefined,
+                }}
               >
                 <History className="w-8 h-8" />
                 <span className="hidden sm:block text-lg font-semibold">
@@ -1306,7 +1376,7 @@ export default function SplitPage() {
                               <Button
                                 onClick={handleDisconnect}
                                 variant="outline"
-                                className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10"
+                                className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-500"
                               >
                                 Disconnect
                               </Button>
@@ -1335,7 +1405,7 @@ export default function SplitPage() {
                                 onClick={() =>
                                   setShowWalletOptions(!showWalletOptions)
                                 }
-                                className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black flex items-center justify-between"
+                                className="w-full network-accent flex items-center justify-between"
                               >
                                 <div className="flex items-center gap-2">
                                   <Wallet className="w-4 h-4" />
@@ -1373,9 +1443,13 @@ export default function SplitPage() {
 
                     {/* Split Creation Form - Only show if wallet is connected and on correct network */}
                     {isConnected && isOnSupportedNetwork && (
-                      <div className="border border-white">
+                      <div className="border rounded-lg">
                         <SplitCreationForm
                           theme={theme}
+                          themeColor={themeColor}
+                          themeForeground={
+                            isOnBaseNetwork ? "#ffffff" : "#000000"
+                          }
                           onSplitCreated={handleSplitCreated}
                         />
                       </div>
@@ -1664,7 +1738,7 @@ export default function SplitPage() {
                       </div>
                       <Button
                         onClick={handleSwap}
-                        className="w-full bg-[#FCFE52] hover:bg-[#E6E84A] text-black"
+                        className="w-full network-accent"
                         disabled={!swapAmount || parseFloat(swapAmount) <= 0}
                       >
                         Swap to Naira
@@ -1808,7 +1882,7 @@ export default function SplitPage() {
             <div className="pt-4">
               <Button
                 onClick={() => setShowSuccessModal(false)}
-                className="bg-[#FCFE52] hover:bg-[#E6E84A] text-black"
+                className="network-accent"
               >
                 Continue
               </Button>

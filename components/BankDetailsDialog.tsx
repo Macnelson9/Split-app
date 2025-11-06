@@ -139,7 +139,7 @@ export default function BankDetailsDialog({
           <Button
             onClick={onSend}
             disabled={!accountNumber || !selectedBank || banksLoading}
-            className="bg-[#FCFE52] hover:bg-[#E6E84A] text-black w-full"
+            className="network-accent w-full"
           >
             Send
           </Button>

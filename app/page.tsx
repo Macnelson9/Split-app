@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Wallet, Power, Moon, Sun } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import DecryptedText from "@/components/decrypted-text";
 import { WalletModal } from "@/components/WalletModal";
 import { useAccount } from "wagmi";
@@ -1229,7 +1230,7 @@ export default function HomePage() {
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Link href="/split">
-            <Button className="group relative bg-[#FCFE52] hover:bg-[#E6E84A] text-black px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base md:text-base lg:text-lg font-semibold flex items-center gap-2 backdrop-blur-sm border border-[#FCFE52]/30 shadow-lg shadow-[#FCFE52]/25 hover:shadow-xl hover:shadow-[#FCFE52]/40 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 font-[family-name:var(--font-rajdhani)]">
+            <Button className="group relative text-black px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base md:text-base lg:text-lg font-semibold flex items-center gap-2 backdrop-blur-sm border shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 font-[family-name:var(--font-rajdhani)] network-accent">
               Launch App
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 group-hover:-rotate-12 transition-transform duration-300" />
               <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1241,7 +1242,9 @@ export default function HomePage() {
               <Button
                 onClick={() => setWalletModalOpen(true)}
                 variant="outline"
-                className="bg-white/10 hover:bg-white/20 border-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                className={`bg-white/10 hover:bg-white/20 border-white/20 ${
+                  theme === "dark" ? "text-white" : "text-black"
+                } px-4 py-2 rounded-lg flex items-center gap-2`}
               >
                 <Wallet className="w-4 h-4" />
                 {formatAddress(address!)}
