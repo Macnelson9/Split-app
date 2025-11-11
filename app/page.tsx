@@ -543,15 +543,15 @@ export default function HomePage() {
               </g>
 
               {/* Thread 11 - Very thin thread */}
-              <path
+              {/* <path
                 id="thread11"
                 d="M70 727 Q210 605 360 555 Q510 505 650 535 Q790 565 930 475 Q1070 385 1260 355"
                 stroke="url(#threadFade2)"
                 strokeWidth="0.4"
                 fill="none"
                 opacity="0.5"
-              />
-              <g filter="url(#neonGlow)">
+              /> */}
+              {/* <g filter="url(#neonGlow)">
                 <animateMotion dur="5.7s" repeatCount="indefinite">
                   <mpath href="#thread11" />
                 </animateMotion>
@@ -566,18 +566,18 @@ export default function HomePage() {
                 >
                   B
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 12 - Thick flowing line */}
-              <path
+              {/* <path
                 id="thread12"
                 d="M110 738 Q270 645 430 595 Q590 545 730 575 Q870 605 1010 515 Q1150 425 1380 395"
                 stroke="url(#threadFade3)"
                 strokeWidth="1.5"
                 fill="none"
                 opacity="0.7"
-              />
-              <g filter="url(#neonGlow)">
+              /> */}
+              {/* <g filter="url(#neonGlow)">
                 <animateMotion dur="4.7s" repeatCount="indefinite">
                   <mpath href="#thread12" />
                 </animateMotion>
@@ -592,18 +592,18 @@ export default function HomePage() {
                 >
                   ₮
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 13 - Thin organic curve */}
-              <path
+              {/* <path
                 id="thread13"
                 d="M45 718 Q185 588 325 538 Q465 488 605 518 Q745 548 885 458 Q1025 368 1220 338"
                 stroke="url(#threadFade1)"
                 strokeWidth="0.7"
                 fill="none"
                 opacity="0.6"
-              />
-              <g filter="url(#neonGlow)">
+              /> */}
+              {/* <g filter="url(#neonGlow)">
                 <animateMotion dur="5.3s" repeatCount="indefinite">
                   <mpath href="#thread13" />
                 </animateMotion>
@@ -618,18 +618,18 @@ export default function HomePage() {
                 >
                   Ξ
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 14 - Medium wave */}
-              <path
+              {/* <path
                 id="thread14"
                 d="M130 721 Q290 630 460 580 Q630 530 770 560 Q910 590 1050 500 Q1190 410 1350 380"
                 stroke="url(#threadFade2)"
                 strokeWidth="1.0"
                 fill="none"
                 opacity="0.8"
-              />
-              <g filter="url(#neonGlow)">
+              /> */}
+              {/* <g filter="url(#neonGlow)">
                 <animateMotion dur="4.9s" repeatCount="indefinite">
                   <mpath href="#thread14" />
                 </animateMotion>
@@ -644,18 +644,18 @@ export default function HomePage() {
                 >
                   $
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 15 - Very thin delicate line */}
-              <path
+              {/* <path
                 id="thread15"
                 d="M25 713 Q165 583 305 533 Q445 483 585 513 Q725 543 865 453 Q1005 363 1200 333"
                 stroke="url(#threadFade3)"
                 strokeWidth="0.3"
                 fill="none"
                 opacity="0.4"
-              />
-              <g filter="url(#neonGlow)">
+              /> */}
+              {/* <g filter="url(#neonGlow)">
                 <animateMotion dur="6.2s" repeatCount="indefinite">
                   <mpath href="#thread15" />
                 </animateMotion>
@@ -670,18 +670,18 @@ export default function HomePage() {
                 >
                   B
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 16 - Thick prominent thread */}
-              <path
+              {/* <path
                 id="thread16"
                 d="M85 719 Q235 605 385 555 Q535 505 675 535 Q815 565 955 475 Q1095 385 1320 355"
                 stroke="url(#threadFade1)"
                 strokeWidth="1.5"
                 fill="none"
                 opacity="0.9"
-              />
-              <g filter="url(#neonGlow)">
+              /> */}
+              {/* <g filter="url(#neonGlow)">
                 <animateMotion dur="4.1s" repeatCount="indefinite">
                   <mpath href="#thread16" />
                 </animateMotion>
@@ -696,10 +696,10 @@ export default function HomePage() {
                 >
                   ₮
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 17 */}
-              <path
+              {/* <path
                 id="thread17"
                 d="M50 720 Q180 660 320 620 Q460 580 600 600 Q740 620 880 560 Q1020 500 1200 340"
                 stroke="url(#threadFade2)"
@@ -722,10 +722,10 @@ export default function HomePage() {
                 >
                   Ξ
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 18 */}
-              <path
+              {/* <path
                 id="thread18"
                 d="M50 720 Q200 680 350 640 Q500 600 650 620 Q800 640 950 580 Q1100 520 1200 340"
                 stroke="url(#threadFade3)"
@@ -748,10 +748,10 @@ export default function HomePage() {
                 >
                   $
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 19 */}
-              <path
+              {/* <path
                 id="thread19"
                 d="M50 720 Q160 670 280 630 Q400 590 540 610 Q680 630 820 570 Q960 510 1200 340"
                 stroke="url(#threadFade1)"
@@ -774,10 +774,10 @@ export default function HomePage() {
                 >
                   B
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 20 */}
-              <path
+              {/* <path
                 id="thread20"
                 d="M50 720 Q220 690 380 650 Q540 610 680 630 Q820 650 960 590 Q1100 530 1200 340"
                 stroke="url(#threadFade2)"
@@ -800,10 +800,10 @@ export default function HomePage() {
                 >
                   ₮
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 21 */}
-              <path
+              {/* <path
                 id="thread21"
                 d="M50 720 Q170 675 300 635 Q430 595 570 615 Q710 635 850 575 Q990 515 1200 340"
                 stroke="url(#threadFade3)"
@@ -826,10 +826,10 @@ export default function HomePage() {
                 >
                   Ξ
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 22 */}
-              <path
+              {/* <path
                 id="thread22"
                 d="M50 720 Q190 745 340 705 Q490 665 630 685 Q770 705 910 645 Q1050 585 1200 340"
                 stroke="url(#threadFade1)"
@@ -852,10 +852,10 @@ export default function HomePage() {
                 >
                   $
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 23 */}
-              <path
+              {/* <path
                 id="thread23"
                 d="M50 720 Q150 725 270 685 Q390 645 530 665 Q670 685 810 625 Q950 565 1200 340"
                 stroke="url(#threadFade2)"
@@ -878,10 +878,10 @@ export default function HomePage() {
                 >
                   B
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 24 */}
-              <path
+              {/* <path
                 id="thread24"
                 d="M50 720 Q210 755 370 715 Q530 675 670 695 Q810 715 950 655 Q1090 595 1200 340"
                 stroke="url(#threadFade3)"
@@ -904,10 +904,10 @@ export default function HomePage() {
                 >
                   ₮
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 25 */}
-              <path
+              {/* <path
                 id="thread25"
                 d="M50 720 Q165 730 290 690 Q415 650 555 670 Q695 690 835 630 Q975 570 1200 340"
                 stroke="url(#threadFade1)"
@@ -930,10 +930,10 @@ export default function HomePage() {
                 >
                   Ξ
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 26 */}
-              <path
+              {/* <path
                 id="thread26"
                 d="M50 720 Q230 760 390 720 Q550 680 690 700 Q830 720 970 660 Q1110 600 1200 340"
                 stroke="url(#threadFade2)"
@@ -956,10 +956,10 @@ export default function HomePage() {
                 >
                   $
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 27 */}
-              <path
+              {/* <path
                 id="thread27"
                 d="M50 720 Q175 740 310 700 Q445 660 585 680 Q725 700 865 640 Q1005 580 1200 340"
                 stroke="url(#threadFade3)"
@@ -982,10 +982,10 @@ export default function HomePage() {
                 >
                   B
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 28 */}
-              <path
+              {/* <path
                 id="thread28"
                 d="M50 720 Q195 750 350 710 Q505 670 645 690 Q785 710 925 650 Q1065 590 1200 340"
                 stroke="url(#threadFade1)"
@@ -1008,10 +1008,10 @@ export default function HomePage() {
                 >
                   ₮
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 29 */}
-              <path
+              {/* <path
                 id="thread29"
                 d="M50 720 Q155 735 285 695 Q415 655 555 675 Q695 695 835 635 Q975 575 1200 340"
                 stroke="url(#threadFade2)"
@@ -1034,10 +1034,10 @@ export default function HomePage() {
                 >
                   Ξ
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 30 */}
-              <path
+              {/* <path
                 id="thread30"
                 d="M50 720 Q215 765 375 725 Q535 685 675 705 Q815 725 955 665 Q1095 605 1200 340"
                 stroke="url(#threadFade3)"
@@ -1060,10 +1060,10 @@ export default function HomePage() {
                 >
                   $
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 31 */}
-              <path
+              {/* <path
                 id="thread31"
                 d="M50 720 Q185 745 325 705 Q465 665 605 685 Q745 705 885 645 Q1025 585 1200 340"
                 stroke="url(#threadFade1)"
@@ -1086,10 +1086,10 @@ export default function HomePage() {
                 >
                   B
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 32 */}
-              <path
+              {/* <path
                 id="thread32"
                 d="M50 720 Q205 755 365 715 Q525 675 665 695 Q805 715 945 655 Q1085 595 1200 340"
                 stroke="url(#threadFade2)"
@@ -1112,10 +1112,10 @@ export default function HomePage() {
                 >
                   ₮
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 33 */}
-              <path
+              {/* <path
                 id="thread33"
                 d="M50 720 Q160 730 295 690 Q430 650 570 670 Q710 690 850 630 Q990 570 1200 340"
                 stroke="url(#threadFade3)"
@@ -1138,10 +1138,10 @@ export default function HomePage() {
                 >
                   B
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 34 */}
-              <path
+              {/* <path
                 id="thread34"
                 d="M50 720 Q225 770 385 730 Q545 690 685 710 Q825 730 965 670 Q1105 610 1200 340"
                 stroke="url(#threadFade1)"
@@ -1164,10 +1164,10 @@ export default function HomePage() {
                 >
                   $
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 35 */}
-              <path
+              {/* <path
                 id="thread35"
                 d="M50 720 Q170 740 305 700 Q440 660 580 680 Q720 700 860 640 Q1000 580 1200 340"
                 stroke="url(#threadFade2)"
@@ -1190,10 +1190,10 @@ export default function HomePage() {
                 >
                   B
                 </text>
-              </g>
+              </g> */}
 
               {/* Thread 36 */}
-              <path
+              {/* <path
                 id="thread36"
                 d="M50 720 Q240 715 400 675 Q560 635 700 655 Q840 675 980 615 Q1120 555 1200 340"
                 stroke="url(#threadFade3)"
@@ -1216,7 +1216,7 @@ export default function HomePage() {
                 >
                   ₮
                 </text>
-              </g>
+              </g> */}
             </g>
           </svg>
         </div>
