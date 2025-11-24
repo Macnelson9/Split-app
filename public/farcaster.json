@@ -1,19 +1,24 @@
 {
-  "miniapp": {
-    "version": "1",
-    "name": "Split",
-    "iconUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
-    "homeUrl": "https://split-live.vercel.app/split",
-    "imageUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
-    "buttonTitle": "Launch Split",
-    "splashImageUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
-    "splashBackgroundColor": "#000000",
-    "requiredChains": [
-      "eip155:42220",
-      "eip155:8453"
-    ],
-    "requiredCapabilities": [
-      "wallet.getEthereumProvider"
-    ]
-  }
+    "accountAssociation": {
+        "header": "eyJmaWQiOjEzMTAzMDMsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg4RERDMjJjNzNEOTlhN2I5MTY2OEQ1MzRiMTlEZTY0ZTQ2YTM0NWU1In0",
+        "payload": "eyJkb21haW4iOiJzcGxpdC1saXZlLnZlcmNlbC5hcHAifQ",
+        "signature": "137rMfLqICiZhc8QVSbzWNrB6qmLqHFipWewAtcmAD92bt2q58pweHGCaVEOYjdAuDRRK2osGoVCctSokbT4mBw="
+    },
+    "miniapp": {
+        "version": "1",
+        "name": "Split",
+        "iconUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
+        "homeUrl": "https://split-live.vercel.app/split",
+        "imageUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
+        "buttonTitle": "Launch Split",
+        "splashImageUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
+        "splashBackgroundColor": "#000000",
+        "requiredChains": [
+            "eip155:42220",
+            "eip155:8453"
+        ],
+        "requiredCapabilities": [
+            "wallet.getEthereumProvider"
+        ]
+    }
 }
