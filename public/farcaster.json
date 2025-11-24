@@ -2,10 +2,11 @@
     "frame": {
         "name": "Split",
         "version": "1",
-        "iconUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
-        "homeUrl": "https://split-live.vercel.app/split",
-        "imageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
-        "splashImageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
+        "iconUrl": "https://split-live.vercel.app/icon.png",
+        "homeUrl": "https://split-live.vercel.app",
+        "imageUrl": "https://split-live.vercel.app/image.png",
+        "buttonTitle": "Open Split",
+        "splashImageUrl": "https://split-live.vercel.app/splash.png",
         "splashBackgroundColor": "#1652F0",
         "webhookUrl": "https://split-live.vercel.app/api/webhook",
         "subtitle": "Split automates trustless payment splitting with built-in fiat off-ramping.",
@@ -13,14 +14,14 @@
         "primaryCategory": "finance",
         "tags": [
             "split",
+            "card",
             "payment",
-            "cards",
             "share",
             "group"
         ],
         "tagline": "automate payment spliting",
-        "ogTitle": "Split- Automate payment Split",
-        "ogDescription": "one click automate payment spliting for multiple wallet"
+        "ogTitle": "Split- Auto payment spliting",
+        "ogDescription": "automate payment spliting"
     },
     "accountAssociation": {
         "header": "eyJmaWQiOjEzMTAzMDMsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg4RERDMjJjNzNEOTlhN2I5MTY2OEQ1MzRiMTlEZTY0ZTQ2YTM0NWU1In0",
