@@ -49,7 +49,13 @@ export default function TokenSelector({
           variant="outline"
         >
           <div className="flex items-center gap-2">
-            <span className="text-lg">{selectedToken.icon}</span>
+            <span
+              className={`text-lg ${
+                theme === "dark" ? "text-white" : "text-black"
+              }`}
+            >
+              {selectedToken.icon}
+            </span>
             <span className={theme === "dark" ? "text-white" : "text-black"}>
               {selectedToken.symbol}
             </span>

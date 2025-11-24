@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -122,4 +122,13 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Network accent utility using CSS variables set at runtime by the app */
+.network-accent {
+  background-color: var(--network-color, #fcfe52);
+  color: var(--network-foreground, #000000);
+}
+.network-accent:hover {
+  background-color: var(--network-color-hover, #e6e84a);
 }

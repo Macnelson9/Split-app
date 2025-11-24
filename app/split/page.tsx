@@ -1145,32 +1145,31 @@ export default function SplitPage() {
 
           {/* Right side: Theme switcher and back to home button */}
           <div className="flex items-center gap-2 pr-3 sm:pr-6 lg:pr-12">
-            <button
+            <Button
               onClick={toggleTheme}
-              className={`flex items-center gap-2 ${
+              variant="outline"
+              className={`${
                 theme === "dark"
-                  ? "bg-white/10 hover:bg-white/20"
-                  : "bg-black/10 hover:bg-black/20"
-              } backdrop-blur-sm border ${
-                theme === "dark" ? "border-white/20" : "border-black/20"
-              } rounded-xl px-4 py-2.5 w-fit transition-all duration-300`}
+                  ? "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                  : "bg-black/10 hover:bg-black/20 border-black/20 text-black"
+              } flex items-center gap-2 backdrop-blur-sm`}
             >
               {theme === "dark" ? (
                 <>
-                  <Sun className="w-5 h-5 text-white" />
-                  <span className="hidden md:inline text-white text-sm font-medium">
+                  <Sun className="w-4 h-4" />
+                  <span className="hidden md:inline text-sm font-medium">
                     Light Mode
                   </span>
                 </>
               ) : (
                 <>
-                  <Moon className="w-5 h-5 text-black" />
-                  <span className="hidden md:inline text-black text-sm font-medium">
+                  <Moon className="w-4 h-4" />
+                  <span className="hidden md:inline text-sm font-medium">
                     Dark Mode
                   </span>
                 </>
               )}
-            </button>
+            </Button>
 
             <Link href="/">
               <Button
@@ -1573,7 +1572,7 @@ export default function SplitPage() {
                       variant="outline"
                       className={`${
                         theme === "dark"
-                          ? "border-white/20 hover:bg-white/10 text-white"
+                          ? "bg-gray-800 hover:bg-gray-700 border-gray-600 text-white"
                           : "border-black/20 hover:bg-black/10 text-black"
                       }`}
                     >
@@ -1674,7 +1673,7 @@ export default function SplitPage() {
                       variant="outline"
                       className={`${
                         theme === "dark"
-                          ? "border-white/20 hover:bg-white/10 text-white"
+                          ? "bg-gray-800 hover:bg-gray-700 border-gray-600 text-white"
                           : "border-black/20 hover:bg-black/10 text-black"
                       }`}
                     >
@@ -1764,30 +1763,20 @@ export default function SplitPage() {
                             To Token
                           </label>
                           <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-100 dark:bg-gray-800">
-                            <span className="text-lg">{nairaToken.icon}</span>
-                            <span
+                            <span className="text-lg text-white">
+                              {nairaToken.icon}
+                            </span>
+                            {/* <span
                               className={
                                 theme === "dark" ? "text-white" : "text-black"
                               }
                             >
                               {nairaToken.symbol}
-                            </span>
-                            <span
-                              className={`text-sm ${
-                                theme === "dark"
-                                  ? "text-white/70"
-                                  : "text-black/70"
-                              }`}
-                            >
+                            </span> */}
+                            <span className="text-sm text-white">
                               {nairaToken.name}
                             </span>
-                            <span
-                              className={`text-sm ${
-                                theme === "dark"
-                                  ? "text-white/50"
-                                  : "text-black/50"
-                              } ml-auto`}
-                            >
+                            <span className="text-sm text-white ml-auto">
                               {nairaToken.price}
                             </span>
                           </div>
@@ -1838,7 +1827,11 @@ export default function SplitPage() {
                       </div>
                       <Button
                         onClick={handleSwap}
-                        className="w-full network-accent"
+                        className={`w-full ${
+                          theme === "light"
+                            ? "bg-black text-white hover:bg-gray-800"
+                            : "network-accent"
+                        }`}
                         disabled={!swapAmount || parseFloat(swapAmount) <= 0}
                       >
                         Swap to Naira
@@ -1863,7 +1856,7 @@ export default function SplitPage() {
                       variant="outline"
                       className={`${
                         theme === "dark"
-                          ? "border-white/20 hover:bg-white/10 text-white"
+                          ? "bg-gray-800 hover:bg-gray-700 border-gray-600 text-white"
                           : "border-black/20 hover:bg-black/10 text-black"
                       }`}
                     >
@@ -1977,7 +1970,11 @@ export default function SplitPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className={`text-sm ${theme === "dark" ? "text-white/70" : "text-black/70"}`}>
+            <p
+              className={`text-sm ${
+                theme === "dark" ? "text-white/70" : "text-black/70"
+              }`}
+            >
               Choose a wallet to connect to the application
             </p>
             <div className="space-y-2">
