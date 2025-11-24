@@ -3,6 +3,7 @@
 import type React from "react";
 import StaggeredMenu from "@/components/StaggeredMenu";
 import { useState, useEffect } from "react";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 export default function ClientLayout({
   children,
@@ -22,6 +23,11 @@ export default function ClientLayout({
         savedTheme === "light"
       );
     }
+  }, []);
+
+  useEffect(() => {
+    // Call ready() to hide splash screen in Farcaster miniapp
+    sdk.actions.ready().catch(console.error);
   }, []);
 
   const toggleTheme = () => {
