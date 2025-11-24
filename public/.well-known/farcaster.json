@@ -10,7 +10,7 @@
         "splashBackgroundColor": "#1652F0",
         "webhookUrl": "https://split-live.vercel.app/api/webhook",
         "subtitle": "Trustless payment splitting",
-        "description": "Decentralized payment splitting protocol enabling trustless distribution of digital assets to multiple recipients. Built for Web3 teams, DAOs, and seamless fiat offramping.",
+        "description": "Decentralized payment splitting protocol enabling trustless distribution of digital assets to multiple recipients. Built for teams, DAOs, & seamless fiat offramping.",
         "primaryCategory": "finance",
         "tags": [
             "rewards",
