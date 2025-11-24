@@ -10,7 +10,17 @@
         "webhookUrl": "https://split-live.vercel.app/api/webhook",
         "subtitle": "Split automates trustless payment splitting with built-in fiat off-ramping.",
         "description": "Split is a decentralized payment splitting and ultimate offramping protocol. it enables trustless, transparent distribution of digital assets to multiple recipients based on predefined percentages. Built for Web3 teams, DAOs, and communities, also seamlessly move your stablecoins into your bank account as local currency.",
-        "primaryCategory": "finance"
+        "primaryCategory": "finance",
+        "tags": [
+            "split",
+            "payment",
+            "cards",
+            "share",
+            "group"
+        ],
+        "tagline": "automate payment spliting",
+        "ogTitle": "Split- Automate payment Split",
+        "ogDescription": "one click automate payment spliting for multiple wallet"
     },
     "accountAssociation": {
         "header": "eyJmaWQiOjEzMTAzMDMsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg4RERDMjJjNzNEOTlhN2I5MTY2OEQ1MzRiMTlEZTY0ZTQ2YTM0NWU1In0",
