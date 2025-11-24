@@ -7,11 +7,11 @@
     "miniapp": {
         "version": "1",
         "name": "Split",
-        "iconUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
+        "iconUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
         "homeUrl": "https://split-live.vercel.app/split",
-        "imageUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
+        "imageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
         "buttonTitle": "Launch Split",
-        "splashImageUrl": "https://split-live.vercel.app/Split%20Celo%20light.png",
+        "splashImageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
         "splashBackgroundColor": "#000000",
         "requiredChains": [
             "eip155:42220",
