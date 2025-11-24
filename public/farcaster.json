@@ -1,24 +1,20 @@
 {
+    "frame": {
+        "name": "Split",
+        "version": "1",
+        "iconUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
+        "homeUrl": "https://split-live.vercel.app/split",
+        "imageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
+        "splashImageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
+        "splashBackgroundColor": "#1652F0",
+        "webhookUrl": "https://split-live.vercel.app/api/webhook",
+        "subtitle": "Split automates trustless payment splitting with built-in fiat off-ramping.",
+        "description": "Split is a decentralized payment splitting and ultimate offramping protocol. it enables trustless, transparent distribution of digital assets to multiple recipients based on predefined percentages. Built for Web3 teams, DAOs, and communities, also seamlessly move your stablecoins into your bank account as local currency.",
+        "primaryCategory": "finance"
+    },
     "accountAssociation": {
         "header": "eyJmaWQiOjEzMTAzMDMsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg4RERDMjJjNzNEOTlhN2I5MTY2OEQ1MzRiMTlEZTY0ZTQ2YTM0NWU1In0",
         "payload": "eyJkb21haW4iOiJzcGxpdC1saXZlLnZlcmNlbC5hcHAifQ",
         "signature": "137rMfLqICiZhc8QVSbzWNrB6qmLqHFipWewAtcmAD92bt2q58pweHGCaVEOYjdAuDRRK2osGoVCctSokbT4mBw="
-    },
-    "miniapp": {
-        "version": "1",
-        "name": "Split",
-        "iconUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
-        "homeUrl": "https://split-live.vercel.app/split",
-        "imageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
-        "buttonTitle": "Launch Split",
-        "splashImageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
-        "splashBackgroundColor": "#000000",
-        "requiredChains": [
-            "eip155:42220",
-            "eip155:8453"
-        ],
-        "requiredCapabilities": [
-            "wallet.getEthereumProvider"
-        ]
     }
 }
