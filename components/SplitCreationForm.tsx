@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,9 @@ import {
 import { Plus, Minus, Loader2 } from "lucide-react";
 import { useSplitFactory } from "@/src/hooks/useSplitFactory";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
+import { useAccount } from "wagmi";
+import { celo, base, baseSepolia } from "wagmi/chains";
+import { celoSepolia } from "@/lib/wagmi";
 import { Address } from "viem";
 
 interface SplitCreationFormProps {
@@ -68,9 +71,32 @@ export function SplitCreationForm({
     null
   );
 
-  const { createSplit, isCreating, isConfirming, isConfirmed } =
+  const { chain } = useAccount();
+  const { createSplit, isCreating, isConfirming, isConfirmed, hash } =
     useSplitFactory();
   const { showSuccess, showError } = useToastNotification();
+
+  // Get explorer URL based on network
+  const getExplorerUrl = (address: string) => {
+    if (!chain) return `https://basescan.org/address/${address}`;
+    if (chain.id === base.id) return `https://basescan.org/address/${address}`;
+    if (chain.id === baseSepolia.id)
+      return `https://sepolia.basescan.org/address/${address}`;
+    if (chain.id === celo.id) return `https://celoscan.io/address/${address}`;
+    if (chain.id === celoSepolia.id)
+      return `https://celo-sepolia.blockscout.com/address/${address}`;
+    return `https://basescan.org/address/${address}`;
+  };
+
+  // Get explorer name for button text
+  const getExplorerName = () => {
+    if (!chain) return "BaseScan";
+    if (chain.id === base.id) return "BaseScan";
+    if (chain.id === baseSepolia.id) return "BaseScan (Sepolia)";
+    if (chain.id === celo.id) return "CeloScan";
+    if (chain.id === celoSepolia.id) return "Celo Explorer";
+    return "BaseScan";
+  };
 
   const addRecipient = () => {
     setRecipients([...recipients, ""]);
@@ -131,14 +157,16 @@ export function SplitCreationForm({
     if (!validateForm()) return;
 
     try {
-      const scaledPercentages = percentages.map((p) => p * 100); // Scale to basis points
+      const scaledPercentages = percentages.map((p) =>
+        BigInt(Math.round(p * 100))
+      ); // Scale to basis points
       const result = await createSplit(
         selectedToken as Address,
         recipients as Address[],
         scaledPercentages
       );
 
-      showSuccess("Split created successfully!", `Split address: ${result}`);
+      showSuccess("Split creation initiated!", `Transaction: ${result}`);
       // Store the created split address in local state for immediate display
       setCreatedSplitAddress(result);
 
@@ -147,7 +175,7 @@ export function SplitCreationForm({
       setPercentages([100]);
       setSelectedToken(BASE_TOKENS[0].address);
 
-      onSplitCreated?.(result);
+      // onSplitCreated will be called when confirmed
     } catch (error) {
       console.error("Create split error:", error);
       showError(
@@ -156,6 +184,17 @@ export function SplitCreationForm({
       );
     }
   };
+
+  // Call onSplitCreated when transaction is confirmed
+  useEffect(() => {
+    if (isConfirmed && createdSplitAddress && hash) {
+      showSuccess(
+        "Split created successfully!",
+        `Split address: ${createdSplitAddress}`
+      );
+      onSplitCreated?.(createdSplitAddress);
+    }
+  }, [isConfirmed, createdSplitAddress, hash, onSplitCreated, showSuccess]);
 
   const totalPercentage = percentages.reduce((sum, p) => sum + p, 0);
   const isValidPercentage = totalPercentage === 100;
@@ -225,67 +264,69 @@ export function SplitCreationForm({
               </Button>
             </div>
 
-            {recipients.map((recipient, index) => (
-              <div key={index} className="flex gap-2 items-end">
-                <div className="flex-1 space-y-2">
-                  <Label
-                    className={`text-sm ${
-                      theme === "dark" ? "text-white/70" : "text-black/70"
-                    }`}
-                  >
-                    Recipient {index + 1}
-                  </Label>
-                  <Input
-                    type="text"
-                    placeholder="0x..."
-                    value={recipient}
-                    onChange={(e) => updateRecipient(index, e.target.value)}
-                    className={`${
-                      theme === "dark"
-                        ? "bg-black/50 border-white/20 text-white placeholder:text-white/50"
-                        : "bg-white/50 border-black/20 text-black placeholder:text-black/50"
-                    }`}
-                  />
+            <div className="max-h-48 overflow-y-auto">
+              {recipients.map((recipient, index) => (
+                <div key={index} className="flex gap-2 items-end mb-4">
+                  <div className="flex-1 space-y-2">
+                    <Label
+                      className={`text-sm ${
+                        theme === "dark" ? "text-white/70" : "text-black/70"
+                      }`}
+                    >
+                      Recipient {index + 1}
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="0x..."
+                      value={recipient}
+                      onChange={(e) => updateRecipient(index, e.target.value)}
+                      className={`${
+                        theme === "dark"
+                          ? "bg-black/50 border-white/20 text-white placeholder:text-white/50"
+                          : "bg-white/50 border-black/20 text-black placeholder:text-black/50"
+                      }`}
+                    />
+                  </div>
+                  <div className="w-24 space-y-2">
+                    <Label
+                      className={`text-sm ${
+                        theme === "dark" ? "text-white/70" : "text-black/70"
+                      }`}
+                    >
+                      %
+                    </Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={percentages[index] || ""}
+                      onChange={(e) => updatePercentage(index, e.target.value)}
+                      min="0"
+                      max="100"
+                      className={`${
+                        theme === "dark"
+                          ? "bg-black/50 border-white/20 text-white"
+                          : "bg-white/50 border-black/20 text-black"
+                      }`}
+                    />
+                  </div>
+                  {recipients.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeRecipient(index)}
+                      className={`${
+                        theme === "dark"
+                          ? "border-white/20 hover:bg-white/10"
+                          : "border-black/20 hover:bg-black/10"
+                      }`}
+                    >
+                      <Minus className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
-                <div className="w-24 space-y-2">
-                  <Label
-                    className={`text-sm ${
-                      theme === "dark" ? "text-white/70" : "text-black/70"
-                    }`}
-                  >
-                    %
-                  </Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={percentages[index] || ""}
-                    onChange={(e) => updatePercentage(index, e.target.value)}
-                    min="0"
-                    max="100"
-                    className={`${
-                      theme === "dark"
-                        ? "bg-black/50 border-white/20 text-white"
-                        : "bg-white/50 border-black/20 text-black"
-                    }`}
-                  />
-                </div>
-                {recipients.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeRecipient(index)}
-                    className={`${
-                      theme === "dark"
-                        ? "border-white/20 hover:bg-white/10"
-                        : "border-black/20 hover:bg-black/10"
-                    }`}
-                  >
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
 
             <div className="flex justify-between items-center text-sm">
               <span
@@ -305,7 +346,12 @@ export function SplitCreationForm({
 
           <Button
             type="submit"
-            disabled={isCreating || isConfirming || !isValidPercentage}
+            disabled={
+              isCreating ||
+              isConfirming ||
+              !isValidPercentage ||
+              recipients.length <= 1
+            }
             className="w-full"
             style={{
               backgroundColor: themeColor,
@@ -327,55 +373,6 @@ export function SplitCreationForm({
             )}
           </Button>
         </form>
-
-        {/* Display created split address */}
-        {createdSplitAddress && (
-          <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-            <h3
-              className={`text-sm font-medium mb-2 ${
-                theme === "dark" ? "text-green-400" : "text-green-600"
-              }`}
-            >
-              Split Created Successfully!
-            </h3>
-            <p
-              className={`text-xs mb-3 ${
-                theme === "dark" ? "text-white/70" : "text-black/70"
-              }`}
-            >
-              Your split contract has been deployed. You can now deposit funds
-              and distribute them according to your rules.
-            </p>
-            <div className="flex items-center gap-2">
-              <code
-                className={`text-xs font-mono px-2 py-1 rounded ${
-                  theme === "dark"
-                    ? "bg-black/50 text-white"
-                    : "bg-white/50 text-black"
-                }`}
-              >
-                {createdSplitAddress}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  window.open(
-                    `https://celoscan.io/address/${createdSplitAddress}`,
-                    "_blank"
-                  )
-                }
-                className={`${
-                  theme === "dark"
-                    ? "border-white/20 hover:bg-white/10"
-                    : "border-black/20 hover:bg-black/10"
-                }`}
-              >
-                View on CeloScan
-              </Button>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
