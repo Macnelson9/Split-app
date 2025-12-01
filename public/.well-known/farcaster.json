@@ -7,21 +7,21 @@
         "imageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
         "buttonTitle": "Open Split",
         "splashImageUrl": "https://split-live.vercel.app/Split%20Celo%20light%20-%20Edited.png",
-        "splashBackgroundColor": "#1652F0",
+        "splashBackgroundColor": "#000000",
         "webhookUrl": "https://split-live.vercel.app/api/webhook",
-        "subtitle": "Split automates trustless payment splitting with built-in fiat off-ramping.",
-        "description": "Split is a decentralized payment splitting and ultimate offramping protocol. it enables trustless, transparent distribution of digital assets to multiple recipients based on predefined percentages. Built for Web3 teams, DAOs, and communities, also seamlessly move your stablecoins into your bank account as local currency.",
+        "subtitle": "Trustless payment splitting",
+        "description": "Decentralized payment splitting protocol enabling trustless distribution of digital assets to multiple recipients. Built for teams, DAOs, and seamless fiat offramping.",
         "primaryCategory": "finance",
         "tags": [
-            "split",
-            "card",
+            "rewards",
+            "leaderboard",
             "payment",
-            "share",
-            "group"
+            "warpcast",
+            "earn"
         ],
-        "tagline": "automate payment spliting",
-        "ogTitle": "Split- Auto payment spliting",
-        "ogDescription": "automate payment spliting"
+        "tagline": "Automate payment splitting",
+        "ogTitle": "Split - Auto payment splitting",
+        "ogDescription": "Automate payment splitting"
     },
     "accountAssociation": {
         "header": "eyJmaWQiOjEzMTAzMDMsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg4RERDMjJjNzNEOTlhN2I5MTY2OEQ1MzRiMTlEZTY0ZTQ2YTM0NWU1In0",
