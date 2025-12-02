@@ -3,6 +3,8 @@
 import type React from "react";
 import StaggeredMenu from "@/components/StaggeredMenu";
 import { useState, useEffect } from "react";
+import { useNetworkAccent } from "@/src/hooks/useNetworkAccent";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 export default function ClientLayout({
   children,
@@ -10,6 +12,7 @@ export default function ClientLayout({
   children: React.ReactNode;
 }>) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const { accentColor } = useNetworkAccent();
 
   useEffect(() => {
     // Load theme from localStorage on mount
@@ -22,6 +25,11 @@ export default function ClientLayout({
         savedTheme === "light"
       );
     }
+  }, []);
+
+  useEffect(() => {
+    // Call ready() to hide splash screen in Farcaster miniapp
+    sdk.actions.ready().catch(console.error);
   }, []);
 
   const toggleTheme = () => {
@@ -65,7 +73,7 @@ export default function ClientLayout({
         changeMenuColorOnOpen={true}
         colors={["#B19EEF", "#5227FF"]}
         logoUrl="/Split Celo light.png"
-        accentColor="#FCFE52"
+        accentColor={accentColor}
         isFixed={true}
         theme={theme}
         onThemeToggle={toggleTheme}

@@ -50,9 +50,17 @@ export function useTokenPrices() {
         .map((config) => config.coingeckoId)
         .join(",");
 
-      // Fetch prices from CoinGecko API
+      // Fetch prices from CoinGecko API (encode ids and use explicit CORS options)
+      const encodedIds = encodeURIComponent(ids);
       const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
+        `https://api.coingecko.com/api/v3/simple/price?ids=${encodedIds}&vs_currencies=usd`,
+        {
+          method: "GET",
+          mode: "cors",
+          headers: {
+            Accept: "application/json",
+          },
+        }
       );
 
       if (!response.ok) {

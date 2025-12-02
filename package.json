@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
+    "@farcaster/miniapp-sdk": "^0.2.1",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/poppins": "^5.2.7",
     "@hookform/resolvers": "^3.10.0",
