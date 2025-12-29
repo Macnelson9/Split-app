@@ -12,9 +12,9 @@ contract SplitCard is ReentrancyGuard {
         address creator;
         uint256 amount;
         address token; // address(0) for native
-        uint256 expiry; // timestamp
+        uint256 expire_date; // timestamp
         bool redeemed;
-        address redeemer;
+        address redeemer_addr;
     }
 
     mapping(bytes32 => Card) public cards;
@@ -25,11 +25,11 @@ contract SplitCard is ReentrancyGuard {
         address indexed creator,
         uint256 amount,
         address token,
-        uint256 expiry
+        uint256 expire_date
     );
     event CardRedeemed(
         bytes32 indexed code,
-        address indexed redeemer,
+        address indexed redeemer_addr,
         uint256 amount,
         address token
     );
@@ -48,17 +48,15 @@ contract SplitCard is ReentrancyGuard {
         uint256 durationDays
     ) external payable nonReentrant {
         if (amount == 0) revert InvalidAmount();
-        bytes32 code = keccak256(
-            abi.encodePacked(block.timestamp, msg.sender, nonce++)
-        );
+        bytes32 code = keccak256(abi.encodePacked(msg.sender, nonce++));
         if (cards[code].creator != address(0)) revert CardAlreadyExists(); // unlikely, but safe
 
-        uint256 expiry = block.timestamp + (durationDays * 1 days);
+        uint256 expire_date = block.timestamp + (durationDays * 1 days);
         cards[code] = Card(
             msg.sender,
             amount,
             token,
-            expiry,
+            expire_date,
             false,
             address(0)
         );
@@ -69,17 +67,17 @@ contract SplitCard is ReentrancyGuard {
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         }
 
-        emit CardCreated(code, msg.sender, amount, token, expiry);
+        emit CardCreated(code, msg.sender, amount, token, expire_date);
     }
 
     function redeemCard(bytes32 code) external nonReentrant {
         Card storage card = cards[code];
         if (card.creator == address(0)) revert CardNotFound();
         if (card.redeemed) revert CardAlreadyRedeemed();
-        if (block.timestamp > card.expiry) revert CardExpired();
+        if (block.timestamp > card.expire_date) revert CardExpired();
 
         card.redeemed = true;
-        card.redeemer = msg.sender;
+        card.redeemer_addr = msg.sender;
 
         if (card.token == address(0)) {
             (bool success, ) = payable(msg.sender).call{value: card.amount}("");
@@ -94,7 +92,7 @@ contract SplitCard is ReentrancyGuard {
     function withdrawExpired(bytes32 code) external nonReentrant {
         Card storage card = cards[code];
         if (card.creator != msg.sender) revert Unauthorized();
-        if (!card.redeemed && block.timestamp > card.expiry) {
+        if (!card.redeemed && block.timestamp > card.expire_date) {
             uint256 amount = card.amount;
             card.amount = 0; // prevent re-withdrawal
             if (card.token == address(0)) {
@@ -115,9 +113,9 @@ contract SplitCard is ReentrancyGuard {
             address creator,
             uint256 amount,
             address token,
-            uint256 expiry,
+            uint256 expire_date,
             bool redeemed,
-            address redeemer
+            address redeemer_addr
         )
     {
         Card memory card = cards[code];
@@ -125,9 +123,9 @@ contract SplitCard is ReentrancyGuard {
             card.creator,
             card.amount,
             card.token,
-            card.expiry,
+            card.expire_date,
             card.redeemed,
-            card.redeemer
+            card.redeemer_addr
         );
     }
 }
