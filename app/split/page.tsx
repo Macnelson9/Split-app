@@ -847,7 +847,7 @@ export default function SplitPage() {
                   <feComposite
                     in="blur"
                     in2="alphaAdjustedNoise"
-                    operator="multiply"
+                    // operator="multiply"
                     result="noisyBlur"
                   />
                   <feMerge>
@@ -948,7 +948,7 @@ export default function SplitPage() {
                   <feComposite
                     in="blur"
                     in2="alphaAdjustedNoise"
-                    operator="multiply"
+                    // operator="multiply"
                     result="noisyBlur"
                   />
                   <feMerge>
@@ -1436,7 +1436,7 @@ export default function SplitPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Wallet Connection Section - Hidden on mobile */}
                     {!isMobile && (
-                      <Card className="border border-white/20 bg-black/50 backdrop-blur-sm">
+                      <Card className="self-start border border-white/20 bg-black/50 backdrop-blur-sm">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2 text-white font-[family-name:var(--font-share-tech-mono)]">
                             <Wallet className="w-5 h-5" />

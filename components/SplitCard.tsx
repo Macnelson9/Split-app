@@ -10,6 +10,8 @@ import { ExternalLink, Clock, Coins, Send, Loader2 } from "lucide-react";
 import { Address, formatEther } from "viem";
 import { useSplitContract } from "@/src/hooks/useSplitContract";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
+import { useAccount } from "wagmi";
+import { baseSepolia, base, celo, celoSepolia } from "wagmi/chains";
 
 interface SplitCardProps {
   splitAddress: Address;
@@ -28,6 +30,8 @@ export function SplitCard({
   const [showDeposit, setShowDeposit] = useState(false);
   const [ethPrice, setEthPrice] = useState<number | null>(null);
 
+  const { chain } = useAccount();
+
   const {
     balances,
     isFinalized,
@@ -45,24 +49,58 @@ export function SplitCard({
 
   const isEthSplit = token === "0x0000000000000000000000000000000000000000";
 
-  // Fetch ETH price on component mount
+  // Determine native token symbol based on network
+  const getNativeTokenSymbol = () => {
+    if (!chain) return "ETH"; // Default
+    if (chain.id === base.id || chain.id === baseSepolia.id) return "ETH";
+    if (chain.id === celo.id || chain.id === celoSepolia.id) return "CELO";
+    return "ETH";
+  };
+
+  // Get explorer URL based on network
+  const getExplorerUrl = (address: string) => {
+    if (!chain) return `https://basescan.org/address/${address}`; // Default
+    if (chain.id === base.id) return `https://basescan.org/address/${address}`;
+    if (chain.id === baseSepolia.id)
+      return `https://sepolia.basescan.org/address/${address}`;
+    if (chain.id === celo.id) return `https://celoscan.io/address/${address}`;
+    if (chain.id === celoSepolia.id)
+      return `https://celo-sepolia.blockscout.com/address/${address}`;
+    return `https://basescan.org/address/${address}`;
+  };
+
+  // Get explorer name for button text
+  const getExplorerName = () => {
+    if (!chain) return "BaseScan";
+    if (chain.id === base.id) return "BaseScan";
+    if (chain.id === baseSepolia.id) return "BaseScan (Sepolia)";
+    if (chain.id === celo.id) return "CeloScan";
+    if (chain.id === celoSepolia.id) return "Celo Explorer";
+    return "BaseScan";
+  };
+
+  // Fetch native token price on component mount
   useEffect(() => {
-    const fetchEthPrice = async () => {
+    const fetchTokenPrice = async () => {
       try {
+        const coinId =
+          chain?.id === celo.id || chain?.id === celoSepolia.id
+            ? "celo"
+            : "ethereum";
         const response = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
+          `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`
         );
         const data = await response.json();
-        setEthPrice(data.ethereum.usd);
+        setEthPrice(data[coinId].usd);
       } catch (error) {
-        console.error("Failed to fetch ETH price:", error);
+        console.error("Failed to fetch token price:", error);
       }
     };
 
     if (isEthSplit) {
-      fetchEthPrice();
+      fetchTokenPrice();
     }
-  }, [isEthSplit]);
+  }, [isEthSplit, chain?.id]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -70,7 +108,7 @@ export function SplitCard({
 
   const formatToken = (tokenAddress: string) => {
     if (tokenAddress === "0x0000000000000000000000000000000000000000") {
-      return "ETH";
+      return getNativeTokenSymbol();
     }
     return formatAddress(tokenAddress);
   };
@@ -90,8 +128,8 @@ export function SplitCard({
       if (token === "0x0000000000000000000000000000000000000000") {
         await depositNative(depositAmount);
         showSuccess(
-          "ETH deposited successfully!",
-          `Deposited ${depositAmount} ETH`
+          `${getNativeTokenSymbol()} deposited successfully!`,
+          `Deposited ${depositAmount} ${getNativeTokenSymbol()}`
         );
       } else {
         await depositToken(depositAmount);
@@ -116,7 +154,7 @@ export function SplitCard({
     try {
       if (token === "0x0000000000000000000000000000000000000000") {
         await distributeNative();
-        showSuccess("ETH distributed successfully!");
+        showSuccess(`${getNativeTokenSymbol()} distributed successfully!`);
       } else {
         await distributeToken();
         showSuccess("Tokens distributed successfully!");
@@ -217,7 +255,7 @@ export function SplitCard({
                 }`}
               >
                 {isEthSplit
-                  ? `${formatEther(balances[0])} ETH`
+                  ? `${formatEther(balances[0])} ${getNativeTokenSymbol()}`
                   : `${formatEther(balances[1])} tokens`}
               </span>
             </div>
@@ -305,7 +343,8 @@ export function SplitCard({
                       theme === "dark" ? "text-white/70" : "text-black"
                     }`}
                   >
-                    Deposit Amount ({formatToken(token)})
+                    Deposit Amount (
+                    {isEthSplit ? getNativeTokenSymbol() : formatToken(token)})
                   </Label>
                   <div className="space-y-1">
                     <Input
@@ -341,7 +380,7 @@ export function SplitCard({
                     size="sm"
                     onClick={handleDeposit}
                     disabled={!depositAmount || isWriting || isConfirming}
-                    className="flex-1 bg-[#FCFE52] hover:bg-[#0041CC] text-white"
+                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-black"
                   >
                     {isWriting || isConfirming ? (
                       <>
@@ -399,15 +438,10 @@ export function SplitCard({
               ? "border-white/20 hover:bg-white/10"
               : "border-black/20 hover:bg-black/10"
           }`}
-          onClick={() =>
-            window.open(
-              `https://sepolia.basescan.org/address/${splitAddress}`,
-              "_blank"
-            )
-          }
+          onClick={() => window.open(getExplorerUrl(splitAddress), "_blank")}
         >
           <ExternalLink className="w-4 h-4 mr-2" />
-          View on BaseScan
+          View on {getExplorerName()}
         </Button>
       </CardContent>
     </Card>
