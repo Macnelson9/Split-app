@@ -1,11 +1,9 @@
 import type React from "react";
 import type { Metadata } from "next";
 import { Poppins, Inter } from "next/font/google";
-import "./globals.css";
+import "./globals.css" assert { type: "css" };
 import ClientLayout from "./client-layout";
 import { Providers } from "@/components/providers";
-import "@fontsource/poppins";
-import "@fontsource/inter";
 
 const poppins = Poppins({
   subsets: ["latin"],
