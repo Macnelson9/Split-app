@@ -1,0 +1,9 @@
+[profile.default]
+src = "contract"
+out = "out"
+libs = ["lib"]
+
+[rpc_endpoints]
+celo_mainnet = "https://celo-mainnet.g.alchemy.com/v2/Z8ps3lEeb_j7VOniV_nSVx4o1940CLWl"
+celo_alfajores = "https://alfajores-forno.celo-testnet.org"
+

@@ -188,6 +188,12 @@ For questions, suggestions, or support:
 - Join our Discord community
 - Email: ucheofatu@gmail.com
 
+
+
+## SplitCard Contract Address
+  
 ---
+
+
 
 Built with ❤️
