@@ -67,15 +67,12 @@ export function useSplitFactory() {
   // Function to fetch all splits from the factory
   const fetchSplits = async () => {
     try {
-      const total = await readContract(config, {
-        address: FACTORY_ADDRESS,
-        abi: FACTORY_ABI,
-        functionName: "totalSplitsCreated",
-        args: [],
-        chainId: chain?.id,
-      });
-      const splitsArray = [];
-      for (let i = 0; i < Number(total); i++) {
+      if (!totalSplitsCreated || totalSplitsCreated === 0) {
+        return [];
+      }
+      const count = Number(totalSplitsCreated);
+      const splitsArray: Address[] = [];
+      for (let i = 0; i < count; i++) {
         const split = await readContract(config, {
           address: FACTORY_ADDRESS,
           abi: FACTORY_ABI,
@@ -83,9 +80,9 @@ export function useSplitFactory() {
           args: [i],
           chainId: chain?.id,
         });
-        splitsArray.push(split);
+        splitsArray.push(split as Address);
       }
-      return splitsArray as Address[];
+      return splitsArray;
     } catch (error) {
       console.error("Failed to fetch splits:", error);
       throw error;
