@@ -308,7 +308,7 @@ export function SplitCreationForm({
         <CardTitle
           className={`${
             theme === "dark" ? "text-white" : "text-black"
-          } font-[family-name:var(--font-share-tech-mono)]`}
+          } font-(family-name:--font-share-tech-mono)`}
         >
           Create New Split
         </CardTitle>
