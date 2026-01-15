@@ -30,6 +30,7 @@ export interface SplitInfo {
   address: Address;
   token: Address;
   createdAt: number;
+  creator: Address;
 }
 
 export function useSplitFactory() {
@@ -120,7 +121,7 @@ export function useSplitFactory() {
         return [];
       }
 
-      // Step 2: Fetch token and createdAt for each split address
+      // Step 2: Fetch token, createdAt, and splitCreator for each split address
       const detailContracts: any[] = [];
       for (const addr of splitAddresses) {
         detailContracts.push({
@@ -133,6 +134,11 @@ export function useSplitFactory() {
           abi: SPLIT_ABI,
           functionName: "createdAt",
         });
+        detailContracts.push({
+          address: addr,
+          abi: SPLIT_ABI,
+          functionName: "splitCreator",
+        });
       }
 
       const detailResults = await multicall(config, {
@@ -141,11 +147,12 @@ export function useSplitFactory() {
         allowFailure: true,
       });
 
-      // Parse results: every 2 results correspond to one split (token, createdAt)
+      // Parse results: every 3 results correspond to one split (token, createdAt, splitCreator)
       const splitsInfo: SplitInfo[] = [];
       for (let i = 0; i < splitAddresses.length; i++) {
-        const tokenResult = detailResults[i * 2];
-        const createdAtResult = detailResults[i * 2 + 1];
+        const tokenResult = detailResults[i * 3];
+        const createdAtResult = detailResults[i * 3 + 1];
+        const creatorResult = detailResults[i * 3 + 2];
 
         const tokenAddr =
           tokenResult.status === "success"
@@ -157,10 +164,16 @@ export function useSplitFactory() {
             ? Number(createdAtResult.result)
             : Math.floor(Date.now() / 1000);
 
+        const creatorAddr =
+          creatorResult.status === "success"
+            ? (creatorResult.result as Address)
+            : ("0x0000000000000000000000000000000000000000" as Address);
+
         splitsInfo.push({
           address: splitAddresses[i],
           token: tokenAddr,
           createdAt: createdAtValue,
+          creator: creatorAddr,
         });
       }
 

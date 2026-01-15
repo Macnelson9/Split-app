@@ -180,8 +180,12 @@ export default function SplitPage() {
       return;
     }
     try {
-      const splits = await fetchSplits();
-      setUserSplits(splits);
+      const allSplits = await fetchSplits();
+      // Filter to only show splits created by the connected wallet
+      const userCreatedSplits = allSplits.filter(
+        (split) => split.creator.toLowerCase() === address.toLowerCase()
+      );
+      setUserSplits(userCreatedSplits);
       setCurrentPage(1);
     } catch (error) {
       console.error("Failed to load user splits:", error);
