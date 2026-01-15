@@ -1,10 +1,11 @@
+import { useCallback } from "react";
 import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
   useAccount,
 } from "wagmi";
-import { readContract } from "wagmi/actions";
+import { readContract, multicall } from "wagmi/actions";
 import { Address, formatEther } from "viem";
 import { SPLIT_CONTRACT_ABI, config } from "@/lib/wagmi";
 import { celo, base, baseSepolia } from "wagmi/chains";
@@ -13,6 +14,8 @@ import SPLIT_BASE_MAINNET_FACTORY_ABI from "@/lib/SPLIT_BASE_MAINNET_FACTORY_ABI
 import SPLIT_BASE_SEPOLIA_FACTORY_ABI from "@/lib/SPLIT_BASE_SEPOLIA_FACTORY_ABI.json";
 import SPLIT_CELO_MAINNET_FACTORY_ABI from "@/lib/SPLIT_CELO_MAINNET_FACTORY_ABI.json";
 import SPLIT_CELO_SEPOLIA_FACTORY_ABI from "@/lib/SPLIT_CELO_SEPOLIA_FACTORY_ABI.json";
+import SPLIT_BASE_MAINNET_CONTRACT_ABI from "@/lib/SPLIT_BASE_MAINNET_CONTRACT_ABI.json";
+import SPLIT_CELO_MAINNET_CONTRACT_ABI from "@/lib/SPLIT_CELO_MAINNET_CONTRACT_ABI.json";
 
 const FACTORY_ADDRESS_CELO_MAINNET = process.env
   .NEXT_PUBLIC_FACTORY_ADDRESS_CELO_MAINNET as Address;
@@ -22,6 +25,12 @@ const FACTORY_ADDRESS_CELO_SEPOLIA = process.env
   .NEXT_PUBLIC_FACTORY_ADDRESS_CELO_SEPOLIA as Address;
 const FACTORY_ADDRESS_BASE_SEPOLIA = process.env
   .NEXT_PUBLIC_FACTORY_ADDRESS_BASE_SEPOLIA as Address;
+
+export interface SplitInfo {
+  address: Address;
+  token: Address;
+  createdAt: number;
+}
 
 export function useSplitFactory() {
   // Get current chain to determine which contract address and ABI to use
@@ -56,38 +65,117 @@ export function useSplitFactory() {
   // console.log("Using factory address:", FACTORY_ADDRESS);
   // console.log("Is on Base Sepolia:", isOnBaseSepolia);
 
-  // Read functions
-  const { data: totalSplitsCreated } = useReadContract({
-    address: FACTORY_ADDRESS,
-    abi: FACTORY_ABI,
-    functionName: "totalSplitsCreated",
-    chainId: chain?.id,
-  });
+  // Determine which split contract ABI to use based on chain
+  const getSplitContractABI = useCallback(() => {
+    if (isOnCeloMainnet || isOnCeloSepolia) {
+      return SPLIT_CELO_MAINNET_CONTRACT_ABI;
+    }
+    return SPLIT_BASE_MAINNET_CONTRACT_ABI;
+  }, [isOnCeloMainnet, isOnCeloSepolia]);
 
-  // Function to fetch all splits from the factory
-  const fetchSplits = async () => {
+  // Read functions
+  const { data: totalSplitsCreated, refetch: refetchTotalSplits } =
+    useReadContract({
+      address: FACTORY_ADDRESS,
+      abi: FACTORY_ABI,
+      functionName: "totalSplitsCreated",
+      chainId: chain?.id,
+    });
+
+  // Function to fetch all splits from the factory with their token addresses
+  const fetchSplits = useCallback(async (): Promise<SplitInfo[]> => {
     try {
-      if (!totalSplitsCreated || totalSplitsCreated === 0) {
+      // Refetch to get the latest count
+      const { data: latestCount } = await refetchTotalSplits();
+
+      if (!latestCount || latestCount === BigInt(0)) {
         return [];
       }
-      const count = Number(totalSplitsCreated);
-      const splitsArray: Address[] = [];
-      for (let i = 0; i < count; i++) {
-        const split = await readContract(config, {
-          address: FACTORY_ADDRESS,
-          abi: FACTORY_ABI,
-          functionName: "splits",
-          args: [i],
-          chainId: chain?.id,
-        });
-        splitsArray.push(split as Address);
+
+      const splitCount = Number(latestCount);
+      const SPLIT_ABI = getSplitContractABI();
+
+      // Step 1: Fetch all split addresses
+      const addressContracts = Array.from({ length: splitCount }, (_, i) => ({
+        address: FACTORY_ADDRESS,
+        abi: FACTORY_ABI,
+        functionName: "splits",
+        args: [BigInt(i)],
+      }));
+
+      const addressResults = await multicall(config, {
+        contracts: addressContracts,
+        chainId: chain?.id,
+        allowFailure: true,
+      });
+
+      const splitAddresses: Address[] = [];
+      for (const result of addressResults) {
+        if (result.status === "success" && result.result) {
+          splitAddresses.push(result.result as Address);
+        }
       }
-      return splitsArray;
+
+      if (splitAddresses.length === 0) {
+        return [];
+      }
+
+      // Step 2: Fetch token and createdAt for each split address
+      const detailContracts: any[] = [];
+      for (const addr of splitAddresses) {
+        detailContracts.push({
+          address: addr,
+          abi: SPLIT_ABI,
+          functionName: "token",
+        });
+        detailContracts.push({
+          address: addr,
+          abi: SPLIT_ABI,
+          functionName: "createdAt",
+        });
+      }
+
+      const detailResults = await multicall(config, {
+        contracts: detailContracts,
+        chainId: chain?.id,
+        allowFailure: true,
+      });
+
+      // Parse results: every 2 results correspond to one split (token, createdAt)
+      const splitsInfo: SplitInfo[] = [];
+      for (let i = 0; i < splitAddresses.length; i++) {
+        const tokenResult = detailResults[i * 2];
+        const createdAtResult = detailResults[i * 2 + 1];
+
+        const tokenAddr =
+          tokenResult.status === "success"
+            ? (tokenResult.result as Address)
+            : ("0x0000000000000000000000000000000000000000" as Address);
+
+        const createdAtValue =
+          createdAtResult.status === "success"
+            ? Number(createdAtResult.result)
+            : Math.floor(Date.now() / 1000);
+
+        splitsInfo.push({
+          address: splitAddresses[i],
+          token: tokenAddr,
+          createdAt: createdAtValue,
+        });
+      }
+
+      return splitsInfo;
     } catch (error) {
       console.error("Failed to fetch splits:", error);
-      throw error;
+      return [];
     }
-  };
+  }, [
+    FACTORY_ADDRESS,
+    FACTORY_ABI,
+    chain?.id,
+    getSplitContractABI,
+    refetchTotalSplits,
+  ]);
 
   // Write functions
   const {

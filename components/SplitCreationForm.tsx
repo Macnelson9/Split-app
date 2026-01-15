@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,23 +15,10 @@ import {
 import { Plus, Minus, Loader2 } from "lucide-react";
 import { useSplitFactory } from "@/src/hooks/useSplitFactory";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
+import { useAccount } from "wagmi";
 import { celo, base, baseSepolia } from "wagmi/chains";
 import { celoSepolia } from "@/lib/wagmi";
 import { Address } from "viem";
-
-type NetworkType = "base" | "celo" | "unknown";
-
-// Map common chain IDs to our network types
-const CHAIN_ID_TO_NETWORK: Record<number, NetworkType> = {
-  // Celo mainnet
-  42220: "celo",
-  // Celo Sepolia (custom-defined in repo)
-  11142220: "celo",
-  // Base mainnet
-  8453: "base",
-  // Base Sepolia (commonly 84531)
-  84531: "base",
-};
 
 interface SplitCreationFormProps {
   theme: "dark" | "light";
@@ -81,10 +67,6 @@ export function SplitCreationForm({
   const [createdSplitAddress, setCreatedSplitAddress] = useState<string | null>(
     null
   );
-  const [networkType, setNetworkType] = useState<NetworkType>("unknown");
-  const [accentColor, setAccentColor] = useState("#FCFE52");
-  const [accentHover, setAccentHover] = useState("#E6E84A");
-  const [foreground, setForeground] = useState("#000");
 
   const { chain } = useAccount();
   const { createSplit, isCreating, isConfirming, isConfirmed, hash } =
@@ -237,65 +219,6 @@ export function SplitCreationForm({
   const totalPercentage = percentages.reduce((sum, p) => sum + p, 0);
   const isValidPercentage = totalPercentage === 100;
 
-  const applyFor = (type: NetworkType) => {
-    if (type === "base") {
-      setAccentColor("#0040CC");
-      setAccentHover("#0033AA");
-      setForeground("#ffffff");
-      document.documentElement.style.setProperty("--network-color", "#0040CC");
-      document.documentElement.style.setProperty(
-        "--network-color-hover",
-        "#0033AA"
-      );
-      document.documentElement.style.setProperty(
-        "--network-foreground",
-        "#ffffff"
-      );
-    } else if (type === "celo") {
-      setAccentColor("#FCFE52");
-      setAccentHover("#E6E84A");
-      setForeground("#000000");
-      document.documentElement.style.setProperty("--network-color", "#FCFE52");
-      document.documentElement.style.setProperty(
-        "--network-color-hover",
-        "#E6E84A"
-      );
-      document.documentElement.style.setProperty(
-        "--network-foreground",
-        "#000000"
-      );
-    } else {
-      // default fallback
-      setAccentColor("#FCFE52");
-      setAccentHover("#E6E84A");
-      setForeground("#000000");
-      document.documentElement.style.setProperty("--network-color", "#FCFE52");
-      document.documentElement.style.setProperty(
-        "--network-color-hover",
-        "#E6E84A"
-      );
-      document.documentElement.style.setProperty(
-        "--network-foreground",
-        "#000000"
-      );
-    }
-  };
-
-  useEffect(() => {
-    // Update color when chain changes via wagmi
-    if (chain?.id) {
-      const type = CHAIN_ID_TO_NETWORK[chain.id] || "unknown";
-      if (type !== networkType) {
-        setNetworkType(type);
-        applyFor(type);
-      }
-    } else if (networkType !== "unknown") {
-      // No chain connected, reset to unknown
-      setNetworkType("unknown");
-      applyFor("unknown");
-    }
-  }, [chain?.id, networkType]);
-
   return (
     <Card
       className={`${
@@ -308,7 +231,7 @@ export function SplitCreationForm({
         <CardTitle
           className={`${
             theme === "dark" ? "text-white" : "text-black"
-          } font-(family-name:--font-share-tech-mono)`}
+          } font-[family-name:var(--font-share-tech-mono)]`}
         >
           Create New Split
         </CardTitle>

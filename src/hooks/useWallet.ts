@@ -1,5 +1,6 @@
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { baseSepolia, celo, base } from "wagmi/chains";
+import { celoSepolia } from "@/lib/wagmi";
 import { injected } from "wagmi/connectors";
 
 export function useWallet() {
@@ -25,7 +26,7 @@ export function useWallet() {
     if (!chain) return;
 
     // Define supported networks in order of preference
-    const supportedChains = [celo, base, baseSepolia];
+    const supportedChains = [celo, base, baseSepolia, celoSepolia];
     const currentChainId = chain.id;
 
     // If already on a supported network, do nothing
@@ -48,7 +49,9 @@ export function useWallet() {
     throw new Error("Failed to switch to any supported network");
   };
 
-  const isOnSupportedNetwork = chain ? [celo.id, base.id, baseSepolia.id, 11142220].includes(chain.id) : false;
+  const isOnSupportedNetwork = chain
+    ? [celo.id, base.id, baseSepolia.id, celoSepolia.id].includes(chain.id)
+    : false;
 
   return {
     address,

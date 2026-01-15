@@ -30,7 +30,7 @@ import { SplitCreationForm } from "@/components/SplitCreationForm";
 import { SplitCard } from "@/components/SplitCard";
 import TokenSelector from "@/components/TokenSelector";
 import { useWallet } from "@/src/hooks/useWallet";
-import { useSplitFactory } from "@/src/hooks/useSplitFactory";
+import { useSplitFactory, SplitInfo } from "@/src/hooks/useSplitFactory";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
 import { useTokenPrices } from "@/src/hooks/useTokenPrices";
 
@@ -76,7 +76,7 @@ export default function SplitPage() {
   const [isClient, setIsClient] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [decryptKey, setDecryptKey] = useState(0);
-  const [userSplits, setUserSplits] = useState<any[]>([]);
+  const [userSplits, setUserSplits] = useState<SplitInfo[]>([]);
   const [activeView, setActiveView] = useState<
     "createSplit" | "mySplits" | "swap" | "transactions"
   >("createSplit");
@@ -179,19 +179,11 @@ export default function SplitPage() {
     }
     try {
       const splits = await fetchSplits();
-      // For now, we'll just store the addresses. In a real app, you'd fetch more details
-      setUserSplits([]);
-      setUserSplits(
-        splits.map((splitAddress: string) => ({
-          address: splitAddress,
-          token: "0x0000000000000000000000000000000000000000", // Default to ETH
-          createdAt: Date.now() / 1000, // Placeholder timestamp
-        }))
-      );
+      setUserSplits(splits);
     } catch (error) {
-      // console.error("Failed to load user splits:", error);
-      // showError("Failed to load user splits", "Please try again later");
+      console.error("Failed to load user splits:", error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, isOnSupportedNetwork]);
 
   // Load splits when component mounts or when network/address changes
