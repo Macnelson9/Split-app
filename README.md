@@ -1,35 +1,35 @@
 # SPLIT
 
-A decentralized payment splitting application built on the Base blockchain. SPLIT allows users to create smart contracts that automatically distribute payments among multiple recipients according to predefined percentages.
+A decentralized payment splitting app for Base and Celo. Create on-chain split contracts that distribute ETH or USDC to multiple recipients using predefined percentages.
 
 ## Overview
 
-SPLIT is a Web3 application that simplifies payment distribution through smart contracts. Users can create "split" contracts that define how incoming payments (ETH or ERC-20 tokens) should be divided among multiple recipients. The platform charges a small 0.5% fee on distributions to support ongoing development.
+SPLIT makes payment distribution simple for teams, DAOs, and creators. Create a split contract once, deposit funds, and trigger a distribution whenever you are ready. The platform charges a 0.5% fee on distributions to support ongoing development.
 
 ### Key Features
 
-- **Multi-Token Support**: Create splits for ETH and popular ERC-20 tokens on Base (USDC, DAI, WETH)
-- **Flexible Distribution**: Define custom percentage splits among any number of recipients
-- **Smart Contract Security**: All distributions are handled by audited smart contracts on Base
-- **Real-time Management**: Deposit funds, distribute payments, and finalize splits through an intuitive dashboard
-- **Base Network Integration**: Built specifically for the Base ecosystem with optimized gas fees
-- **Wallet Integration**: Connect with popular Web3 wallets (MetaMask, WalletConnect, etc.)
+- **USDC Splitting on Base and Celo**: Create and distribute USDC splits across both networks
+- **ETH Support**: Split native ETH payments alongside USDC
+- **Flexible Distribution**: Define custom percentage splits for any number of recipients
+- **Factory-Based Contracts**: Deploy and manage splits through a single factory contract
+- **Wallet Integration**: Connect with MetaMask, WalletConnect, and other Web3 wallets
+- **Simple Dashboard**: Create, fund, distribute, and finalize splits from one place
 
 ## How It Works
 
-1. **Create a Split**: Define recipients and their percentage shares
-2. **Deposit Funds**: Send ETH or tokens to the split contract
-3. **Distribute**: Trigger automatic distribution according to your rules
-4. **Finalize**: Lock the contract when distribution is complete
+1. **Create a Split**: Add recipients and percentage shares
+2. **Deposit Funds**: Send ETH or USDC to the split contract
+3. **Distribute**: Trigger a distribution when you are ready
+4. **Finalize**: Lock the contract once distributions are complete
 
-### Smart Contract Architecture
+## Supported Networks
 
-The application consists of two main contracts:
+- Base Sepolia (USDC and ETH)
+- Celo Sepolia (USDC and ETH)
+- Base Mainnet (planned)
+- Celo Mainnet (planned)
 
-- **SplitContract**: Individual split contracts that handle fund distribution
-- **SplitFactory**: Factory contract for creating and managing split contracts
-
-### Fee Structure
+## Fee Structure
 
 - 0.5% fee on all distributions (50 basis points)
 - Fees are sent to a treasury address for platform sustainability
@@ -47,7 +47,7 @@ The application consists of two main contracts:
 1. Clone the repository:
 
 ```bash
-git clone <https://github.com/Macnelson9/Split-app.git>
+git clone https://github.com/Macnelson9/Split-app.git
 cd Split-app
 ```
 
@@ -75,7 +75,7 @@ npm run dev
 pnpm dev
 ```
 
-6. Open [http://localhost:3000](http://localhost:3000) in your browser
+6. Open `http://localhost:3000` in your browser
 
 ## Usage
 
@@ -83,13 +83,13 @@ pnpm dev
 
 1. Click "Connect Wallet" on the homepage
 2. Select your preferred wallet
-3. Ensure you're connected to Base Sepolia testnet
+3. Ensure you are connected to Base Sepolia or Celo Sepolia
 
 ### Creating a Split
 
 1. Navigate to the Split Dashboard
 2. Click "Create Split"
-3. Select the token type (ETH, USDC, etc.)
+3. Select the token type (ETH or USDC)
 4. Add recipient addresses and their percentage shares
 5. Ensure percentages total 100%
 6. Confirm the transaction
@@ -101,54 +101,40 @@ pnpm dev
 - **Finalize**: Lock the contract when distribution is complete
 - **View History**: Track all your created splits
 
-### Supported Networks
+## Smart Contract Architecture
 
-- Base Sepolia (Testnet)
-- Base Mainnet (Coming soon)
-- Celo Sepolia (Coming soon)
-- Celo Mainnet (Coming soon)
+The application uses two main contracts:
+
+- **SplitContract**: Individual split contracts that handle fund distribution
+- **SplitFactory**: Factory contract for creating and managing split contracts
+
+### SplitContract Functions
+
+- `distributeEth()`: Distributes ETH according to recipient percentages
+- `distributeToken()`: Distributes USDC according to recipient percentages
+- `depositEth()`: Deposits ETH into the contract
+- `depositToken()`: Deposits USDC into the contract
+- `finalize()`: Locks the contract permanently
+
+## Security
+
+- OpenZeppelin libraries for trusted contract primitives
+- ReentrancyGuard protection on state-changing functions
+- SafeERC20 for secure token transfers
+- Only contract creators can trigger distributions
+- Contracts can be finalized to prevent further changes
 
 ## Technology Stack
 
 - **Frontend**: Next.js 15, React 19, TypeScript
 - **Styling**: Tailwind CSS, Radix UI components
-- **Web3**: Wagmi, Viem, Base blockchain
+- **Web3**: Wagmi, Viem
 - **Smart Contracts**: Solidity, OpenZeppelin
 - **Animations**: Framer Motion, GSAP
 
-## Smart Contract Details
-
-### SplitContract
-
-Core functionality for individual payment splits:
-
-- `distributeEth()`: Distributes ETH according to recipient percentages
-- `distributeToken()`: Distributes ERC-20 tokens
-- `depositEth()`: Deposits ETH into the contract
-- `depositToken()`: Deposits ERC-20 tokens
-- `finalize()`: Locks the contract permanently
-
-### SplitFactory
-
-Factory contract for creating and tracking splits:
-
-- `createSplit()`: Deploys new SplitContract instances
-- `getUserSplits()`: Returns all splits created by a user
-- `getAllSplits()`: Returns all splits in the system
-
-## Security
-
-- All smart contracts use OpenZeppelin's battle-tested libraries
-- ReentrancyGuard protection on all state-changing functions
-- SafeERC20 for secure token transfers
-- Only contract creators can trigger distributions
-- Contracts can be finalized to prevent further changes
-
 ## Contributing
 
-We welcome contributions to SPLIT! Here's how you can help:
-
-### Development Setup
+We welcome contributions to SPLIT:
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
@@ -158,19 +144,11 @@ We welcome contributions to SPLIT! Here's how you can help:
 
 ### Areas for Contribution
 
-- **Smart Contract Audits**: Security reviews and improvements
-- **UI/UX Enhancements**: Better user experience and design
-- **New Token Support**: Adding more ERC-20 tokens
-- **Multi-Chain Support**: Expanding beyond Base
-- **Testing**: Additional test coverage
-- **Documentation**: Improving docs and tutorials
-
-### Code Standards
-
-- Follow TypeScript best practices
-- Use ESLint and Prettier for code formatting
-- Write comprehensive tests for new features
-- Follow conventional commit messages
+- Smart contract audits and improvements
+- UI and UX enhancements
+- Additional token support
+- Multi-chain expansion
+- Tests and documentation
 
 ## License
 
@@ -185,15 +163,10 @@ This is experimental software. Use at your own risk. Always test thoroughly on t
 For questions, suggestions, or support:
 
 - Create an issue on GitHub
-- Join our Discord community
 - Email: ucheofatu@gmail.com
 
-
-
 ## SplitCard Contract Address
-  
+
 ---
 
-
-
-Built with ❤️
+Built with care.
