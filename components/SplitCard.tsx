@@ -11,7 +11,7 @@ import { Address, formatEther, formatUnits } from "viem";
 import { useSplitContract } from "@/src/hooks/useSplitContract";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
 import { useAccount } from "wagmi";
-import { baseSepolia, base, celo, celoSepolia } from "wagmi/chains";
+import { base, celo } from "wagmi/chains";
 
 // USDC token addresses
 const USDC_ADDRESSES: Record<string, boolean> = {
@@ -60,8 +60,8 @@ export function SplitCard({
   // Determine native token symbol based on network
   const getNativeTokenSymbol = () => {
     if (!chain) return "ETH"; // Default
-    if (chain.id === base.id || chain.id === baseSepolia.id) return "ETH";
-    if (chain.id === celo.id || chain.id === celoSepolia.id) return "CELO";
+    if (chain.id === base.id) return "ETH";
+    if (chain.id === celo.id) return "CELO";
     return "ETH";
   };
 
@@ -76,11 +76,7 @@ export function SplitCard({
   const getExplorerUrl = (address: string) => {
     if (!chain) return `https://basescan.org/address/${address}`; // Default
     if (chain.id === base.id) return `https://basescan.org/address/${address}`;
-    if (chain.id === baseSepolia.id)
-      return `https://sepolia.basescan.org/address/${address}`;
     if (chain.id === celo.id) return `https://celoscan.io/address/${address}`;
-    if (chain.id === celoSepolia.id)
-      return `https://celo-sepolia.blockscout.com/address/${address}`;
     return `https://basescan.org/address/${address}`;
   };
 
@@ -88,9 +84,7 @@ export function SplitCard({
   const getExplorerName = () => {
     if (!chain) return "BaseScan";
     if (chain.id === base.id) return "BaseScan";
-    if (chain.id === baseSepolia.id) return "BaseScan (Sepolia)";
     if (chain.id === celo.id) return "CeloScan";
-    if (chain.id === celoSepolia.id) return "Celo Explorer";
     return "BaseScan";
   };
 
@@ -98,10 +92,7 @@ export function SplitCard({
   useEffect(() => {
     const fetchTokenPrice = async () => {
       try {
-        const coinId =
-          chain?.id === celo.id || chain?.id === celoSepolia.id
-            ? "celo"
-            : "ethereum";
+        const coinId = chain?.id === celo.id ? "celo" : "ethereum";
         const response = await fetch(
           `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`
         );

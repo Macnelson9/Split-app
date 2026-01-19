@@ -24,10 +24,8 @@ SPLIT makes payment distribution simple for teams, DAOs, and creators. Create a 
 
 ## Supported Networks
 
-- Base Sepolia (USDC and ETH)
-- Celo Sepolia (USDC and ETH)
-- Base Mainnet (planned)
-- Celo Mainnet (planned)
+- Base Mainnet (USDC and ETH)
+- Celo Mainnet (USDC and ETH)
 
 ## Fee Structure
 
@@ -83,7 +81,7 @@ pnpm dev
 
 1. Click "Connect Wallet" on the homepage
 2. Select your preferred wallet
-3. Ensure you are connected to Base Sepolia or Celo Sepolia
+3. Ensure you are connected to Base mainnet or Celo mainnet
 
 ### Creating a Split
 
@@ -154,10 +152,6 @@ We welcome contributions to SPLIT:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Disclaimer
-
-This is experimental software. Use at your own risk. Always test thoroughly on testnets before mainnet deployment. The developers are not responsible for any financial losses incurred through the use of this software.
-
 ## Contact
 
 For questions, suggestions, or support:
@@ -165,8 +159,8 @@ For questions, suggestions, or support:
 - Create an issue on GitHub
 - Email: ucheofatu@gmail.com
 
-## SplitCard Contract Address
+<!-- ## SplitCard Contract Address
 
----
+--- -->
 
 Built with care.

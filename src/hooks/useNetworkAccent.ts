@@ -6,12 +6,8 @@ type NetworkType = "base" | "celo" | "unknown";
 const CHAIN_ID_TO_NETWORK: Record<number, NetworkType> = {
   // Celo mainnet
   42220: "celo",
-  // Celo Sepolia (custom-defined in repo)
-  11142220: "celo",
   // Base mainnet
   8453: "base",
-  // Base Sepolia (commonly 84532)
-  84532: "base",
 };
 
 export function useNetworkAccent(pollIntervalMs = 5000) {

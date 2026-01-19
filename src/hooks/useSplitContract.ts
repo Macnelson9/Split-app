@@ -6,12 +6,10 @@ import {
 } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { Address, formatEther, parseEther, parseUnits } from "viem";
-import { celo, base, baseSepolia } from "wagmi/chains";
-import { celoSepolia, config } from "@/lib/wagmi";
+import { celo, base } from "wagmi/chains";
+import { config } from "@/lib/wagmi";
 import SPLIT_BASE_MAINNET_CONTRACT_ABI from "@/lib/SPLIT_BASE_MAINNET_CONTRACT_ABI.json";
-import SPLIT_BASE_SEPOLIA_CONTRACT_ABI from "@/lib/SPLIT_BASE_SEPOLIA_CONTRACT_ABI.json";
 import SPLIT_CELO_MAINNET_CONTRACT_ABI from "@/lib/SPLIT_CELO_MAINNET_CONTRACT_ABI.json";
-import SPLIT_CELO_SEPOLIA_CONTRACT_ABI from "@/lib/SPLIT_CELO_SEPOLIA_CONTRACT_ABI.json";
 import ERC20_ABI from "@/lib/ERC20_ABI.json";
 
 // USDC token addresses (6 decimals)
@@ -26,8 +24,6 @@ export function useSplitContract(splitAddress: Address) {
   // Determine which ABI to use based on chain
   const isOnCeloMainnet = chain?.id === celo.id;
   const isOnBaseMainnet = chain?.id === base.id;
-  const isOnCeloSepolia = chain?.id === celoSepolia.id;
-  const isOnBaseSepolia = chain?.id === baseSepolia.id;
 
   let CONTRACT_ABI: any;
 
@@ -35,10 +31,6 @@ export function useSplitContract(splitAddress: Address) {
     CONTRACT_ABI = SPLIT_CELO_MAINNET_CONTRACT_ABI;
   } else if (isOnBaseMainnet) {
     CONTRACT_ABI = SPLIT_BASE_MAINNET_CONTRACT_ABI;
-  } else if (isOnCeloSepolia) {
-    CONTRACT_ABI = SPLIT_CELO_SEPOLIA_CONTRACT_ABI;
-  } else if (isOnBaseSepolia) {
-    CONTRACT_ABI = SPLIT_BASE_SEPOLIA_CONTRACT_ABI;
   } else {
     // Default to Base mainnet
     CONTRACT_ABI = SPLIT_BASE_MAINNET_CONTRACT_ABI;

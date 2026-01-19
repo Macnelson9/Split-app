@@ -23,8 +23,7 @@ import {
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
-import { celo, base, baseSepolia } from "wagmi/chains";
-import { celoSepolia } from "@/lib/wagmi";
+import { celo, base } from "wagmi/chains";
 import { Wallet, ExternalLink, ChevronDown } from "lucide-react";
 import { SplitCreationForm } from "@/components/SplitCreationForm";
 import { SplitCard } from "@/components/SplitCard";
@@ -109,12 +108,9 @@ export default function SplitPage() {
   const { writeContractAsync } = useWriteContract();
   const isOnCelo = chain?.id === celo.id;
   const isOnBase = chain?.id === base.id;
-  const isOnCeloSepolia = chain?.id === celoSepolia.id;
-  const isOnBaseSepolia = chain?.id === baseSepolia.id;
 
   // Determine theme color based on network
-  const isOnBaseNetwork = isOnBase || isOnBaseSepolia;
-  const isOnCeloNetwork = isOnCelo || isOnCeloSepolia;
+  const isOnBaseNetwork = isOnBase;
   const themeColor = isOnBaseNetwork ? "#0040CC" : "#FCFE52"; // Blue for Base, Yellow for Celo
   const themeColorHover = isOnBaseNetwork ? "#0033AA" : "#E6E84A"; // Darker blue for Base, lighter yellow for Celo
   // Also expose these as global CSS variables so other parts of the app can use them
@@ -316,7 +312,7 @@ export default function SplitPage() {
   // Debug: Log current network and factory address
   // console.log("Current chain:", chain?.name, chain?.id);
   // console.log("Is on supported network:", isOnSupportedNetwork);
-  // console.log("Is on Base Sepolia:", isOnBaseSepolia);
+  // console.log("Is on Base mainnet:", isOnBaseNetwork);
   // console.log("User splits count:", userSplits.length);
 
   const toggleTheme = () => {

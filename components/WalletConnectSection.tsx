@@ -169,7 +169,9 @@ export function WalletConnectSection({
                     : "border-black/20 hover:bg-black/10"
                 }`}
               >
-                {isSwitchingChain ? "Switching..." : "Switch to Base Sepolia"}
+                {isSwitchingChain
+                  ? "Switching..."
+                  : "Switch to Base or Celo"}
               </Button>
             )}
 

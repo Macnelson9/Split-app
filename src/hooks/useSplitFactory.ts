@@ -7,13 +7,10 @@ import {
 } from "wagmi";
 import { readContract, multicall } from "wagmi/actions";
 import { Address, formatEther } from "viem";
-import { SPLIT_CONTRACT_ABI, config } from "@/lib/wagmi";
-import { celo, base, baseSepolia } from "wagmi/chains";
-import { celoSepolia } from "@/lib/wagmi";
+import { config } from "@/lib/wagmi";
+import { celo, base } from "wagmi/chains";
 import SPLIT_BASE_MAINNET_FACTORY_ABI from "@/lib/SPLIT_BASE_MAINNET_FACTORY_ABI.json";
-import SPLIT_BASE_SEPOLIA_FACTORY_ABI from "@/lib/SPLIT_BASE_SEPOLIA_FACTORY_ABI.json";
 import SPLIT_CELO_MAINNET_FACTORY_ABI from "@/lib/SPLIT_CELO_MAINNET_FACTORY_ABI.json";
-import SPLIT_CELO_SEPOLIA_FACTORY_ABI from "@/lib/SPLIT_CELO_SEPOLIA_FACTORY_ABI.json";
 import SPLIT_BASE_MAINNET_CONTRACT_ABI from "@/lib/SPLIT_BASE_MAINNET_CONTRACT_ABI.json";
 import SPLIT_CELO_MAINNET_CONTRACT_ABI from "@/lib/SPLIT_CELO_MAINNET_CONTRACT_ABI.json";
 
@@ -21,10 +18,6 @@ const FACTORY_ADDRESS_CELO_MAINNET = process.env
   .NEXT_PUBLIC_FACTORY_ADDRESS_CELO_MAINNET as Address;
 const FACTORY_ADDRESS_BASE_MAINNET = process.env
   .NEXT_PUBLIC_FACTORY_ADDRESS_BASE_MAINNET as Address;
-const FACTORY_ADDRESS_CELO_SEPOLIA = process.env
-  .NEXT_PUBLIC_FACTORY_ADDRESS_CELO_SEPOLIA as Address;
-const FACTORY_ADDRESS_BASE_SEPOLIA = process.env
-  .NEXT_PUBLIC_FACTORY_ADDRESS_BASE_SEPOLIA as Address;
 
 export interface SplitInfo {
   address: Address;
@@ -38,8 +31,6 @@ export function useSplitFactory() {
   const { chain } = useAccount();
   const isOnCeloMainnet = chain?.id === celo.id;
   const isOnBaseMainnet = chain?.id === base.id;
-  const isOnCeloSepolia = chain?.id === celoSepolia.id;
-  const isOnBaseSepolia = chain?.id === baseSepolia.id;
 
   let FACTORY_ADDRESS: Address;
   let FACTORY_ABI: any;
@@ -50,12 +41,6 @@ export function useSplitFactory() {
   } else if (isOnBaseMainnet) {
     FACTORY_ADDRESS = FACTORY_ADDRESS_BASE_MAINNET;
     FACTORY_ABI = SPLIT_BASE_MAINNET_FACTORY_ABI;
-  } else if (isOnCeloSepolia) {
-    FACTORY_ADDRESS = FACTORY_ADDRESS_CELO_SEPOLIA;
-    FACTORY_ABI = SPLIT_CELO_SEPOLIA_FACTORY_ABI;
-  } else if (isOnBaseSepolia) {
-    FACTORY_ADDRESS = FACTORY_ADDRESS_BASE_SEPOLIA;
-    FACTORY_ABI = SPLIT_BASE_SEPOLIA_FACTORY_ABI;
   } else {
     // Default to Celo mainnet
     FACTORY_ADDRESS = FACTORY_ADDRESS_CELO_MAINNET;
@@ -64,15 +49,15 @@ export function useSplitFactory() {
 
   // console.log("Current chain:", chain?.name, chain?.id);
   // console.log("Using factory address:", FACTORY_ADDRESS);
-  // console.log("Is on Base Sepolia:", isOnBaseSepolia);
+  // console.log("Is on Base mainnet:", isOnBaseMainnet);
 
   // Determine which split contract ABI to use based on chain
   const getSplitContractABI = useCallback(() => {
-    if (isOnCeloMainnet || isOnCeloSepolia) {
+    if (isOnCeloMainnet) {
       return SPLIT_CELO_MAINNET_CONTRACT_ABI;
     }
     return SPLIT_BASE_MAINNET_CONTRACT_ABI;
-  }, [isOnCeloMainnet, isOnCeloSepolia]);
+  }, [isOnCeloMainnet]);
 
   // Read functions
   const { data: totalSplitsCreated, refetch: refetchTotalSplits } =

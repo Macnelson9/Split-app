@@ -16,8 +16,7 @@ import { Plus, Minus, Loader2 } from "lucide-react";
 import { useSplitFactory } from "@/src/hooks/useSplitFactory";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
 import { useAccount } from "wagmi";
-import { celo, base, baseSepolia } from "wagmi/chains";
-import { celoSepolia } from "@/lib/wagmi";
+import { celo, base } from "wagmi/chains";
 import { Address } from "viem";
 
 interface SplitCreationFormProps {
@@ -100,11 +99,7 @@ export function SplitCreationForm({
   const getExplorerUrl = (address: string) => {
     if (!chain) return `https://basescan.org/address/${address}`;
     if (chain.id === base.id) return `https://basescan.org/address/${address}`;
-    if (chain.id === baseSepolia.id)
-      return `https://sepolia.basescan.org/address/${address}`;
     if (chain.id === celo.id) return `https://celoscan.io/address/${address}`;
-    if (chain.id === celoSepolia.id)
-      return `https://celo-sepolia.blockscout.com/address/${address}`;
     return `https://basescan.org/address/${address}`;
   };
 
@@ -112,9 +107,7 @@ export function SplitCreationForm({
   const getExplorerName = () => {
     if (!chain) return "BaseScan";
     if (chain.id === base.id) return "BaseScan";
-    if (chain.id === baseSepolia.id) return "BaseScan (Sepolia)";
     if (chain.id === celo.id) return "CeloScan";
-    if (chain.id === celoSepolia.id) return "Celo Explorer";
     return "BaseScan";
   };
 

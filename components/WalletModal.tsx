@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useConnect, useDisconnect, useAccount } from "wagmi";
-import { injected, walletConnect } from "wagmi/connectors";
-import { Wallet, X, ExternalLink } from "lucide-react";
+import { base, celo } from "wagmi/chains";
+import { Wallet, ExternalLink } from "lucide-react";
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -20,7 +20,7 @@ interface WalletModalProps {
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   const { connectors, connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, chain } = useAccount();
 
   const handleConnect = async (connector: any) => {
     try {
@@ -38,6 +38,16 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  const getExplorerUrl = (addr: string) => {
+    if (chain?.id === celo.id) {
+      return `https://celoscan.io/address/${addr}`;
+    }
+    if (chain?.id === base.id) {
+      return `https://basescan.org/address/${addr}`;
+    }
+    return `https://basescan.org/address/${addr}`;
   };
 
   return (
@@ -70,10 +80,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                 </Button>
                 <Button
                   onClick={() =>
-                    window.open(
-                      `https://sepolia.basescan.org/address/${address}`,
-                      "_blank"
-                    )
+                    window.open(getExplorerUrl(address!), "_blank")
                   }
                   variant="outline"
                   className="border-white/20 hover:bg-white/10"
