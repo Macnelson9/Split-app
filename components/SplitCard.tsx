@@ -7,11 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ExternalLink, Clock, Coins, Send, Loader2 } from "lucide-react";
-import { Address, formatEther } from "viem";
+import { Address, formatEther, formatUnits } from "viem";
 import { useSplitContract } from "@/src/hooks/useSplitContract";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
 import { useAccount } from "wagmi";
 import { baseSepolia, base, celo, celoSepolia } from "wagmi/chains";
+
+// USDC token addresses
+const USDC_ADDRESSES: Record<string, boolean> = {
+  "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": true, // Base mainnet USDC
+  "0xef4229c8c3250C675F21BCefa42f58EfbfF6002a": true, // Celo mainnet USDC
+};
 
 interface SplitCardProps {
   splitAddress: Address;
@@ -47,7 +53,9 @@ export function SplitCard({
 
   const { showSuccess, showError } = useToastNotification();
 
-  const isEthSplit = token === "0x0000000000000000000000000000000000000000";
+  const isNativeSplit = token === "0x0000000000000000000000000000000000000000";
+  const isUsdcSplit =
+    USDC_ADDRESSES[token.toLowerCase()] || USDC_ADDRESSES[token];
 
   // Determine native token symbol based on network
   const getNativeTokenSymbol = () => {
@@ -55,6 +63,13 @@ export function SplitCard({
     if (chain.id === base.id || chain.id === baseSepolia.id) return "ETH";
     if (chain.id === celo.id || chain.id === celoSepolia.id) return "CELO";
     return "ETH";
+  };
+
+  // Get token symbol for display
+  const getTokenSymbol = () => {
+    if (isNativeSplit) return getNativeTokenSymbol();
+    if (isUsdcSplit) return "USDC";
+    return "Token";
   };
 
   // Get explorer URL based on network
@@ -79,7 +94,7 @@ export function SplitCard({
     return "BaseScan";
   };
 
-  // Fetch native token price on component mount
+  // Fetch native token price on component mount (only for native token splits)
   useEffect(() => {
     const fetchTokenPrice = async () => {
       try {
@@ -97,10 +112,11 @@ export function SplitCard({
       }
     };
 
-    if (isEthSplit) {
+    // Only fetch price for native token splits, not for USDC (which is always ~$1)
+    if (isNativeSplit) {
       fetchTokenPrice();
     }
-  }, [isEthSplit, chain?.id]);
+  }, [isNativeSplit, chain?.id]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -109,6 +125,13 @@ export function SplitCard({
   const formatToken = (tokenAddress: string) => {
     if (tokenAddress === "0x0000000000000000000000000000000000000000") {
       return getNativeTokenSymbol();
+    }
+    // Check if it's USDC
+    if (
+      USDC_ADDRESSES[tokenAddress.toLowerCase()] ||
+      USDC_ADDRESSES[tokenAddress]
+    ) {
+      return "USDC";
     }
     return formatAddress(tokenAddress);
   };
@@ -125,7 +148,7 @@ export function SplitCard({
     }
 
     try {
-      if (token === "0x0000000000000000000000000000000000000000") {
+      if (isNativeSplit) {
         await depositNative(depositAmount);
         showSuccess(
           `${getNativeTokenSymbol()} deposited successfully!`,
@@ -134,8 +157,8 @@ export function SplitCard({
       } else {
         await depositToken(depositAmount);
         showSuccess(
-          "Token deposited successfully!",
-          `Deposited ${depositAmount} tokens`
+          `${getTokenSymbol()} deposited successfully!`,
+          `Deposited ${depositAmount} ${getTokenSymbol()}`
         );
       }
       setDepositAmount("");
@@ -152,12 +175,12 @@ export function SplitCard({
 
   const handleDistribute = async () => {
     try {
-      if (token === "0x0000000000000000000000000000000000000000") {
+      if (isNativeSplit) {
         await distributeNative();
         showSuccess(`${getNativeTokenSymbol()} distributed successfully!`);
       } else {
         await distributeToken();
-        showSuccess("Tokens distributed successfully!");
+        showSuccess(`${getTokenSymbol()} distributed successfully!`);
       }
       await refreshData();
     } catch (error) {
@@ -187,8 +210,8 @@ export function SplitCard({
     balances &&
     Array.isArray(balances) &&
     balances.length >= 2 &&
-    ((isEthSplit && balances[0] > BigInt(0)) ||
-      (!isEthSplit && balances[1] > BigInt(0)));
+    ((isNativeSplit && balances[0] > BigInt(0)) ||
+      (!isNativeSplit && balances[1] > BigInt(0)));
 
   return (
     <Card
@@ -254,9 +277,11 @@ export function SplitCard({
                   theme === "dark" ? "text-white/70" : "text-black"
                 }`}
               >
-                {isEthSplit
+                {isNativeSplit
                   ? `${formatEther(balances[0])} ${getNativeTokenSymbol()}`
-                  : `${formatEther(balances[1])} tokens`}
+                  : isUsdcSplit
+                  ? `${formatUnits(balances[1], 6)} USDC`
+                  : `${formatEther(balances[1])} ${getTokenSymbol()}`}
               </span>
             </div>
           )}
@@ -343,8 +368,7 @@ export function SplitCard({
                       theme === "dark" ? "text-white/70" : "text-black"
                     }`}
                   >
-                    Deposit Amount (
-                    {isEthSplit ? getNativeTokenSymbol() : formatToken(token)})
+                    Deposit Amount ({getTokenSymbol()})
                   </Label>
                   <div className="space-y-1">
                     <Input
@@ -360,7 +384,7 @@ export function SplitCard({
                           : "bg-white/50 border-black/20 text-black placeholder:text-black/50"
                       }`}
                     />
-                    {isEthSplit &&
+                    {isNativeSplit &&
                       ethPrice &&
                       depositAmount &&
                       parseFloat(depositAmount) > 0 && (
@@ -371,6 +395,17 @@ export function SplitCard({
                         >
                           ≈ ${(parseFloat(depositAmount) * ethPrice).toFixed(2)}{" "}
                           USD
+                        </p>
+                      )}
+                    {isUsdcSplit &&
+                      depositAmount &&
+                      parseFloat(depositAmount) > 0 && (
+                        <p
+                          className={`text-xs ${
+                            theme === "dark" ? "text-white/60" : "text-black/60"
+                          }`}
+                        >
+                          ≈ ${parseFloat(depositAmount).toFixed(2)} USD
                         </p>
                       )}
                   </div>

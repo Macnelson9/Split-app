@@ -10,8 +10,8 @@ const CHAIN_ID_TO_NETWORK: Record<number, NetworkType> = {
   11142220: "celo",
   // Base mainnet
   8453: "base",
-  // Base Sepolia (commonly 84531)
-  84531: "base",
+  // Base Sepolia (commonly 84532)
+  84532: "base",
 };
 
 export function useNetworkAccent(pollIntervalMs = 5000) {

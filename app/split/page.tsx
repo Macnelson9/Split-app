@@ -30,7 +30,7 @@ import { SplitCreationForm } from "@/components/SplitCreationForm";
 import { SplitCard } from "@/components/SplitCard";
 import TokenSelector from "@/components/TokenSelector";
 import { useWallet } from "@/src/hooks/useWallet";
-import { useSplitFactory } from "@/src/hooks/useSplitFactory";
+import { useSplitFactory, SplitInfo } from "@/src/hooks/useSplitFactory";
 import { useToastNotification } from "@/src/hooks/useToastNotification";
 import { useTokenPrices } from "@/src/hooks/useTokenPrices";
 
@@ -76,7 +76,8 @@ export default function SplitPage() {
   const [isClient, setIsClient] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [decryptKey, setDecryptKey] = useState(0);
-  const [userSplits, setUserSplits] = useState<any[]>([]);
+  const [userSplits, setUserSplits] = useState<SplitInfo[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [activeView, setActiveView] = useState<
     "createSplit" | "mySplits" | "swap" | "transactions"
   >("createSplit");
@@ -175,23 +176,21 @@ export default function SplitPage() {
   const loadUserSplits = useCallback(async () => {
     if (!address || !isOnSupportedNetwork) {
       setUserSplits([]);
+      setCurrentPage(1);
       return;
     }
     try {
-      const splits = await fetchSplits();
-      // For now, we'll just store the addresses. In a real app, you'd fetch more details
-      setUserSplits([]);
-      setUserSplits(
-        splits.map((splitAddress: string) => ({
-          address: splitAddress,
-          token: "0x0000000000000000000000000000000000000000", // Default to ETH
-          createdAt: Date.now() / 1000, // Placeholder timestamp
-        }))
+      const allSplits = await fetchSplits();
+      // Filter to only show splits created by the connected wallet
+      const userCreatedSplits = allSplits.filter(
+        (split) => split.creator.toLowerCase() === address.toLowerCase()
       );
+      setUserSplits(userCreatedSplits);
+      setCurrentPage(1);
     } catch (error) {
-      // console.error("Failed to load user splits:", error);
-      // showError("Failed to load user splits", "Please try again later");
+      console.error("Failed to load user splits:", error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, isOnSupportedNetwork]);
 
   // Load splits when component mounts or when network/address changes
@@ -283,9 +282,36 @@ export default function SplitPage() {
       loadUserSplits();
       // Switch to "mySplits" view to show the newly created split
       setActiveView("mySplits");
+      // Reset to first page when a new split is created
+      setCurrentPage(1);
     },
     [loadUserSplits]
   );
+
+  // Pagination logic
+  const cardsPerPage = isMobile ? 2 : 6;
+  const totalPages = Math.ceil(userSplits.length / cardsPerPage);
+  const startIndex = (currentPage - 1) * cardsPerPage;
+  const endIndex = startIndex + cardsPerPage;
+  const currentSplits = userSplits.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   // Debug: Log current network and factory address
   // console.log("Current chain:", chain?.name, chain?.id);
@@ -1583,38 +1609,161 @@ export default function SplitPage() {
                   {isConnected &&
                     isOnSupportedNetwork &&
                     userSplits.length > 0 && (
-                      <motion.div
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                        initial="hidden"
-                        animate="visible"
-                        variants={{
-                          hidden: { opacity: 0 },
-                          visible: {
-                            opacity: 1,
-                            transition: {
-                              staggerChildren: 0.1,
+                      <>
+                        <motion.div
+                          key={currentPage}
+                          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                          initial="hidden"
+                          animate="visible"
+                          variants={{
+                            hidden: { opacity: 0 },
+                            visible: {
+                              opacity: 1,
+                              transition: {
+                                staggerChildren: 0.1,
+                              },
                             },
-                          },
-                        }}
-                      >
-                        {userSplits.map((split, index) => (
-                          <motion.div
-                            key={split.address}
-                            variants={{
-                              hidden: { opacity: 0, y: 20 },
-                              visible: { opacity: 1, y: 0 },
-                            }}
-                            transition={{ duration: 0.5 }}
-                          >
-                            <SplitCard
-                              splitAddress={split.address}
-                              token={split.token}
-                              createdAt={split.createdAt}
-                              theme={theme}
-                            />
-                          </motion.div>
-                        ))}
-                      </motion.div>
+                          }}
+                        >
+                          {currentSplits.map((split, index) => (
+                            <motion.div
+                              key={split.address}
+                              variants={{
+                                hidden: { opacity: 0, y: 20 },
+                                visible: { opacity: 1, y: 0 },
+                              }}
+                              transition={{ duration: 0.5 }}
+                            >
+                              <SplitCard
+                                splitAddress={split.address}
+                                token={split.token}
+                                createdAt={split.createdAt}
+                                theme={theme}
+                              />
+                            </motion.div>
+                          ))}
+                        </motion.div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-center gap-4 mt-8 flex-wrap">
+                            <Button
+                              onClick={handlePrevious}
+                              disabled={currentPage === 1}
+                              style={
+                                currentPage === 1
+                                  ? {}
+                                  : {
+                                      backgroundColor:
+                                        theme === "dark"
+                                          ? "#1F2937"
+                                          : themeColor,
+                                      color:
+                                        theme === "dark"
+                                          ? "white"
+                                          : isOnBaseNetwork
+                                          ? "white"
+                                          : "black",
+                                      borderColor:
+                                        theme === "dark"
+                                          ? "#374151"
+                                          : themeColor,
+                                    }
+                              }
+                              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                                currentPage === 1
+                                  ? theme === "dark"
+                                    ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                  : "hover:opacity-90"
+                              }`}
+                            >
+                              Previous
+                            </Button>
+
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={currentPage.toString()}
+                                onValueChange={(value) =>
+                                  handlePageChange(parseInt(value))
+                                }
+                              >
+                                <SelectTrigger
+                                  style={{
+                                    borderColor:
+                                      theme === "dark" ? "#374151" : themeColor,
+                                    backgroundColor:
+                                      theme === "dark" ? "#1F2937" : "white",
+                                  }}
+                                  className={`w-20 ${
+                                    theme === "dark"
+                                      ? "text-white"
+                                      : "text-black"
+                                  }`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from(
+                                    { length: totalPages },
+                                    (_, i) => (
+                                      <SelectItem
+                                        key={i + 1}
+                                        value={(i + 1).toString()}
+                                      >
+                                        {i + 1}
+                                      </SelectItem>
+                                    )
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <span
+                                className={`text-sm ${
+                                  theme === "dark"
+                                    ? "text-white/70"
+                                    : "text-black/70"
+                                }`}
+                              >
+                                of {totalPages}
+                              </span>
+                            </div>
+
+                            <Button
+                              onClick={handleNext}
+                              disabled={currentPage === totalPages}
+                              style={
+                                currentPage === totalPages
+                                  ? {}
+                                  : {
+                                      backgroundColor:
+                                        theme === "dark"
+                                          ? "#1F2937"
+                                          : themeColor,
+                                      color:
+                                        theme === "dark"
+                                          ? "white"
+                                          : isOnBaseNetwork
+                                          ? "white"
+                                          : "black",
+                                      borderColor:
+                                        theme === "dark"
+                                          ? "#374151"
+                                          : themeColor,
+                                    }
+                              }
+                              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                                currentPage === totalPages
+                                  ? theme === "dark"
+                                    ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                  : "hover:opacity-90"
+                              }`}
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        )}
+                      </>
                     )}
 
                   {isConnected &&

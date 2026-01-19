@@ -27,33 +27,32 @@ interface SplitCreationFormProps {
   onSplitCreated?: (splitAddress: string) => void;
 }
 
-// Base chain token addresses (you can expand this list)
-const BASE_TOKENS = [
+// Token addresses for different chains
+const ALL_TOKENS = [
   {
     address: "0x0000000000000000000000000000000000000000",
     symbol: "ETH",
     name: "Base Ethereum",
+    chainId: 8453, // Base mainnet
+  },
+  {
+    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    symbol: "USDC",
+    name: "USD Coin",
+    chainId: 8453, // Base mainnet
   },
   {
     address: "0x471EcE3750Da237f93B8E339c536989b8978a438",
     symbol: "Celo",
     name: "CeloToken",
+    chainId: 42220, // Celo mainnet
   },
-  // {
-  //   address: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
-  //   symbol: "USDC",
-  //   name: "USD Coin",
-  // },
-  // {
-  //   address: "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
-  //   symbol: "USDT",
-  //   name: "Tether USD",
-  // },
-  // {
-  //   address: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
-  //   symbol: "CUSD",
-  //   name: "Celo USD",
-  // },
+  {
+    address: "0xef4229c8c3250C675F21BCefa42f58EfbfF6002a",
+    symbol: "USDC",
+    name: "USD Coin",
+    chainId: 42220, // Celo mainnet
+  },
 ];
 
 export function SplitCreationForm({
@@ -64,9 +63,7 @@ export function SplitCreationForm({
 }: SplitCreationFormProps) {
   const [recipients, setRecipients] = useState<string[]>([""]);
   const [percentages, setPercentages] = useState<number[]>([100]);
-  const [selectedToken, setSelectedToken] = useState<string>(
-    BASE_TOKENS[0].address
-  );
+  const [selectedToken, setSelectedToken] = useState<string>("");
   const [createdSplitAddress, setCreatedSplitAddress] = useState<string | null>(
     null
   );
@@ -75,6 +72,29 @@ export function SplitCreationForm({
   const { createSplit, isCreating, isConfirming, isConfirmed, hash } =
     useSplitFactory();
   const { showSuccess, showError } = useToastNotification();
+
+  // Get available tokens for current chain
+  const getAvailableTokens = () => {
+    if (!chain) {
+      return ALL_TOKENS.filter((token) => token.chainId === 8453); // Default to Base
+    }
+    return ALL_TOKENS.filter((token) => token.chainId === chain.id);
+  };
+
+  const availableTokens = getAvailableTokens();
+
+  // Initialize selectedToken based on available tokens
+  useEffect(() => {
+    if (availableTokens.length > 0 && !selectedToken) {
+      setSelectedToken(availableTokens[0].address);
+    } else if (
+      availableTokens.length > 0 &&
+      !availableTokens.some((t) => t.address === selectedToken)
+    ) {
+      // Reset if current selection is not available for this chain
+      setSelectedToken(availableTokens[0].address);
+    }
+  }, [chain, availableTokens, selectedToken]);
 
   // Get explorer URL based on network
   const getExplorerUrl = (address: string) => {
@@ -173,7 +193,7 @@ export function SplitCreationForm({
       // Reset form
       setRecipients([""]);
       setPercentages([100]);
-      setSelectedToken(BASE_TOKENS[0].address);
+      setSelectedToken(availableTokens[0]?.address || "");
 
       // onSplitCreated will be called when confirmed
     } catch (error) {
@@ -234,7 +254,7 @@ export function SplitCreationForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {BASE_TOKENS.map((token) => (
+                {availableTokens.map((token) => (
                   <SelectItem key={token.address} value={token.address}>
                     {token.symbol} - {token.name}
                   </SelectItem>

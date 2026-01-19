@@ -4,16 +4,24 @@ import {
   useWaitForTransactionReceipt,
   useAccount,
 } from "wagmi";
-import { Address, formatEther, parseEther } from "viem";
+import { readContract } from "wagmi/actions";
+import { Address, formatEther, parseEther, parseUnits } from "viem";
 import { celo, base, baseSepolia } from "wagmi/chains";
-import { celoSepolia } from "@/lib/wagmi";
+import { celoSepolia, config } from "@/lib/wagmi";
 import SPLIT_BASE_MAINNET_CONTRACT_ABI from "@/lib/SPLIT_BASE_MAINNET_CONTRACT_ABI.json";
 import SPLIT_BASE_SEPOLIA_CONTRACT_ABI from "@/lib/SPLIT_BASE_SEPOLIA_CONTRACT_ABI.json";
 import SPLIT_CELO_MAINNET_CONTRACT_ABI from "@/lib/SPLIT_CELO_MAINNET_CONTRACT_ABI.json";
 import SPLIT_CELO_SEPOLIA_CONTRACT_ABI from "@/lib/SPLIT_CELO_SEPOLIA_CONTRACT_ABI.json";
+import ERC20_ABI from "@/lib/ERC20_ABI.json";
+
+// USDC token addresses (6 decimals)
+const USDC_ADDRESSES: Record<string, boolean> = {
+  "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": true, // Base mainnet USDC
+  "0xef4229c8c3250C675F21BCefa42f58EfbfF6002a": true, // Celo mainnet USDC
+};
 
 export function useSplitContract(splitAddress: Address) {
-  const { chain } = useAccount();
+  const { chain, address: userAddress } = useAccount();
 
   // Determine which ABI to use based on chain
   const isOnCeloMainnet = chain?.id === celo.id;
@@ -65,6 +73,12 @@ export function useSplitContract(splitAddress: Address) {
     chainId: chain?.id,
   });
 
+  // Check if token is USDC (6 decimals)
+  const tokenAddress = token as Address | undefined;
+  const isUsdcToken = tokenAddress
+    ? USDC_ADDRESSES[tokenAddress.toLowerCase()] || USDC_ADDRESSES[tokenAddress]
+    : false;
+
   // Write functions
   const {
     writeContractAsync,
@@ -95,13 +109,46 @@ export function useSplitContract(splitAddress: Address) {
   };
 
   const depositToken = async (amount: string) => {
+    if (
+      !tokenAddress ||
+      tokenAddress === "0x0000000000000000000000000000000000000000"
+    ) {
+      throw new Error("This split does not use an ERC20 token");
+    }
+    if (!userAddress) {
+      throw new Error("Wallet not connected");
+    }
+
     try {
-      const amountInWei = parseEther(amount);
+      // Use 6 decimals for USDC, 18 for other ERC20 tokens
+      const decimals = isUsdcToken ? 6 : 18;
+      const amountInUnits = parseUnits(amount, decimals);
+
+      // Check current allowance
+      const currentAllowance = (await readContract(config, {
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: "allowance",
+        args: [userAddress, splitAddress],
+        chainId: chain?.id,
+      })) as bigint;
+
+      // If allowance is insufficient, request approval first
+      if (currentAllowance < amountInUnits) {
+        await writeContractAsync({
+          address: tokenAddress,
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [splitAddress, amountInUnits],
+        });
+      }
+
+      // Now deposit the tokens
       const result = await writeContractAsync({
         address: splitAddress,
         abi: CONTRACT_ABI,
         functionName: "depositToken",
-        args: [amountInWei],
+        args: [amountInUnits],
       });
       return result;
     } catch (error) {
