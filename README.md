@@ -165,6 +165,8 @@ For questions, suggestions, or support:
 - Create an issue on GitHub
 - Email: ucheofatu@gmail.com
 
+## SplitCard Contract Address
+
 ---
 
 Built with care.

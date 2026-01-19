@@ -26,6 +26,9 @@ export const metadata: Metadata = {
   icons: {
     icon: "/Split Celo light.png",
   },
+    other: {
+    'base:app_id': '69590d824d3a403912ed8b78',
+  },
 };
 
 export default function RootLayout({
